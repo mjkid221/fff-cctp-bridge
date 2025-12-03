@@ -51,36 +51,5 @@ export default function Page() {
 }
 ```
 
-## Styling
-
-All components use:
-- Tailwind CSS for styling
-- Framer Motion for animations
-- Glassmorphism effects (backdrop-blur)
-- Responsive design
-- Dark mode support (via CSS variables)
-
-## Animation Patterns
-
-1. **Entry Animations**: Components fade in and slide up on mount
-2. **Hover Effects**: Scale and translate on hover
-3. **Click Effects**: Scale down on tap
-4. **Staggered Reveals**: Sequential animations with delays
-5. **Spring Physics**: Natural, bouncy transitions
-
-## Color Scheme
-
-- Primary: Purple/Blue gradient
-- Accent: Pink/Purple gradient
-- Background: Subtle animated gradients
-- Text: High contrast foreground/muted-foreground
-- Borders: Semi-transparent with blur
-
-## Responsive Breakpoints
-
-- Mobile: < 768px (single column)
-- Tablet: 768px - 1024px (2 columns)
-- Desktop: > 1024px (4 columns for features)
-
 
 
