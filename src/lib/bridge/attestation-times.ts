@@ -28,22 +28,20 @@ export const CCTP_ATTESTATION_TIMES: Record<SupportedChainId, number> = {
  * Standard attestation times (fallback) in seconds
  * Used when Fast Message is not available
  */
-export const CCTP_STANDARD_ATTESTATION_TIMES: Record<
-  SupportedChainId,
-  number
-> = {
-  // Mainnet - Standard Times
-  Ethereum: 13 * 60, // ~13 minutes (~65 blocks)
-  Arbitrum: 13 * 60, // ~13 minutes (~65 ETH blocks)
-  Base: 13 * 60, // ~13 minutes (~65 ETH blocks)
-  Solana: 25, // ~25 seconds (32 blocks for finality)
+export const CCTP_STANDARD_ATTESTATION_TIMES: Record<SupportedChainId, number> =
+  {
+    // Mainnet - Standard Times
+    Ethereum: 13 * 60, // ~13 minutes (~65 blocks)
+    Arbitrum: 13 * 60, // ~13 minutes (~65 ETH blocks)
+    Base: 13 * 60, // ~13 minutes (~65 ETH blocks)
+    Solana: 25, // ~25 seconds (32 blocks for finality)
 
-  // Testnet - Using same times as mainnet equivalents
-  Ethereum_Sepolia: 13 * 60, // ~13 minutes
-  Arbitrum_Sepolia: 13 * 60, // ~13 minutes
-  Base_Sepolia: 13 * 60, // ~13 minutes
-  Solana_Devnet: 25, // ~25 seconds
-};
+    // Testnet - Using same times as mainnet equivalents
+    Ethereum_Sepolia: 13 * 60, // ~13 minutes
+    Arbitrum_Sepolia: 13 * 60, // ~13 minutes
+    Base_Sepolia: 13 * 60, // ~13 minutes
+    Solana_Devnet: 25, // ~25 seconds
+  };
 
 /**
  * Get the estimated attestation time for a source chain

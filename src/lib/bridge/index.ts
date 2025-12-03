@@ -4,11 +4,19 @@
  */
 
 // Core service
-export { getBridgeService, resetBridgeService, CCTPBridgeService } from "./service";
+export {
+  getBridgeService,
+  resetBridgeService,
+  CCTPBridgeService,
+} from "./service";
 export type { BridgeServiceConfig } from "./service";
 
 // Adapter factory
-export { getAdapterFactory, resetAdapterFactory, AdapterFactory } from "./adapters/factory";
+export {
+  getAdapterFactory,
+  resetAdapterFactory,
+  AdapterFactory,
+} from "./adapters/factory";
 export type { IAdapterCreator } from "./adapters/factory";
 
 // Balance service

@@ -24,12 +24,12 @@ export function AmountInput({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-muted-foreground text-sm font-medium">
           {label}
         </label>
         <motion.button
           onClick={handleMaxClick}
-          className="text-xs font-medium text-primary hover:text-primary/80"
+          className="text-primary hover:text-primary/80 text-xs font-medium"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -38,15 +38,15 @@ export function AmountInput({
       </div>
       <motion.div
         className={cn(
-          "group relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-xl transition-all",
+          "group border-border/50 bg-card/50 relative overflow-hidden rounded-2xl border backdrop-blur-xl transition-all",
           "hover:border-border hover:bg-card/80",
-          "focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/20",
+          "focus-within:border-ring/50 focus-within:ring-ring/20 focus-within:ring-2",
         )}
         whileHover={{ scale: 1.005 }}
       >
         <div className="flex items-center gap-3 p-4">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10">
-            <DollarSign className="size-5 text-primary" />
+          <div className="bg-primary/10 flex size-10 items-center justify-center rounded-xl">
+            <DollarSign className="text-primary size-5" />
           </div>
           <input
             type="text"
@@ -60,13 +60,13 @@ export function AmountInput({
             }}
             placeholder="0.00"
             className={cn(
-              "flex-1 bg-transparent text-2xl font-semibold text-foreground outline-none placeholder:text-muted-foreground/30",
+              "text-foreground placeholder:text-muted-foreground/30 flex-1 bg-transparent text-2xl font-semibold outline-none",
             )}
           />
           <motion.button
             onClick={handleMaxClick}
             className={cn(
-              "rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors",
+              "bg-primary/10 text-primary rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
               "hover:bg-primary/20",
             )}
             whileHover={{ scale: 1.05 }}
@@ -75,8 +75,8 @@ export function AmountInput({
             MAX
           </motion.button>
         </div>
-        <div className="border-t border-border/30 px-4 py-2">
-          <div className="text-xs text-muted-foreground">
+        <div className="border-border/30 border-t px-4 py-2">
+          <div className="text-muted-foreground text-xs">
             ≈ ${value || "0.00"} USD
           </div>
         </div>
@@ -84,6 +84,3 @@ export function AmountInput({
     </div>
   );
 }
-
-
-

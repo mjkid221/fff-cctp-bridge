@@ -19,4 +19,3 @@ export { ThemeTransition } from "./theme-transition";
 export { WalletSelector } from "./wallet-selector";
 export type { TransactionStatus } from "./transaction-status";
 export type { NotificationType } from "./notification";
-

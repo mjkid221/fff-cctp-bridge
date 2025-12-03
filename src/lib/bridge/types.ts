@@ -81,7 +81,6 @@ export interface BridgeParams {
   recipientAddress?: string;
 }
 
-
 /**
  * Token balance information
  */
@@ -104,7 +103,6 @@ export interface IBridgeService {
    * Get token balance for a specific chain
    */
   getBalance(chain: SupportedChainId): Promise<TokenBalance>;
-
 
   /**
    * Get token balance for a specific chain

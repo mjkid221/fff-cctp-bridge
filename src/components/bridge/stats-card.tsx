@@ -47,14 +47,14 @@ export function StatsCard() {
               transition={{ duration: 0.5, delay: 0.1 * index }}
               whileHover={{ scale: 1.02, y: -2 }}
               className={cn(
-                "relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 p-6 backdrop-blur-xl transition-all",
+                "border-border/50 bg-card/50 relative overflow-hidden rounded-2xl border p-6 backdrop-blur-xl transition-all",
                 "hover:border-border hover:bg-card/80 hover:shadow-lg",
               )}
             >
               {/* Background gradient */}
               <div
                 className={cn(
-                  "absolute right-0 top-0 size-32 rounded-full bg-gradient-to-br opacity-50 blur-2xl",
+                  "absolute top-0 right-0 size-32 rounded-full bg-gradient-to-br opacity-50 blur-2xl",
                   stat.color,
                 )}
               />
@@ -67,7 +67,7 @@ export function StatsCard() {
                       stat.color,
                     )}
                   >
-                    <Icon className="size-5 text-foreground" />
+                    <Icon className="text-foreground size-5" />
                   </div>
                   <span
                     className={cn(
@@ -80,10 +80,10 @@ export function StatsCard() {
                     {stat.change}
                   </span>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {stat.label}
                 </div>
-                <div className="mt-1 text-2xl font-bold text-foreground">
+                <div className="text-foreground mt-1 text-2xl font-bold">
                   {stat.value}
                 </div>
               </div>
@@ -94,6 +94,3 @@ export function StatsCard() {
     </motion.div>
   );
 }
-
-
-

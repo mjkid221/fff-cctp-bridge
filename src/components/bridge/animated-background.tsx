@@ -6,11 +6,11 @@ export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Base gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
+      <div className="from-background via-background to-muted/20 absolute inset-0 bg-gradient-to-br" />
 
       {/* Animated orbs */}
       <motion.div
-        className="absolute -left-1/4 top-0 size-96 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 blur-3xl"
+        className="from-primary/20 absolute top-0 -left-1/4 size-96 rounded-full bg-gradient-to-br to-purple-500/20 blur-3xl"
         animate={{
           x: [0, 100, 0],
           y: [0, 50, 0],
@@ -23,7 +23,7 @@ export function AnimatedBackground() {
         }}
       />
       <motion.div
-        className="absolute -right-1/4 top-1/4 size-96 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 blur-3xl"
+        className="absolute top-1/4 -right-1/4 size-96 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 blur-3xl"
         animate={{
           x: [0, -100, 0],
           y: [0, 100, 0],
@@ -61,6 +61,3 @@ export function AnimatedBackground() {
     </div>
   );
 }
-
-
-

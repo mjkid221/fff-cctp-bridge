@@ -15,7 +15,7 @@ export function NetworkToggle() {
     <motion.button
       onClick={() => setEnvironment(isMainnet ? "testnet" : "mainnet")}
       className={cn(
-        "group relative flex h-10 items-center overflow-hidden rounded-xl border transition-all px-3 gap-2",
+        "group relative flex h-10 items-center gap-2 overflow-hidden rounded-xl border px-3 transition-all",
         isMainnet
           ? "border-blue-500/50 bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-blue-600/10"
           : "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-amber-600/10",

@@ -196,4 +196,3 @@ export class DynamicSolanaWalletAdapter implements SolanaWalletProvider {
     }
   }
 }
-

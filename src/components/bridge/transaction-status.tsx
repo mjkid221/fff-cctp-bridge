@@ -52,7 +52,7 @@ export function TransactionStatusModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+        className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
@@ -60,11 +60,11 @@ export function TransactionStatusModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className="relative w-full max-w-md overflow-hidden rounded-3xl border border-border/50 bg-card/95 p-8 shadow-2xl backdrop-blur-2xl"
+          className="border-border/50 bg-card/95 relative w-full max-w-md overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Animated background gradient */}
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5" />
+          <div className="from-primary/5 absolute inset-0 -z-10 bg-gradient-to-br via-transparent to-purple-500/5" />
 
           <div className="flex flex-col items-center text-center">
             {/* Icon */}
@@ -90,7 +90,7 @@ export function TransactionStatusModal({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="mb-2 text-2xl font-bold text-foreground"
+              className="text-foreground mb-2 text-2xl font-bold"
             >
               {config.title}
             </motion.h3>
@@ -100,7 +100,7 @@ export function TransactionStatusModal({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mb-6 text-sm text-muted-foreground"
+              className="text-muted-foreground mb-6 text-sm"
             >
               {config.description}
             </motion.p>
@@ -115,7 +115,7 @@ export function TransactionStatusModal({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "mb-6 flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-sm font-medium text-foreground transition-colors",
+                  "bg-muted/50 text-foreground mb-6 flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
                   "hover:bg-muted",
                 )}
               >
@@ -132,7 +132,7 @@ export function TransactionStatusModal({
                 transition={{ delay: 0.5 }}
                 onClick={onClose}
                 className={cn(
-                  "w-full rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all",
+                  "bg-primary text-primary-foreground w-full rounded-xl px-6 py-3 font-semibold transition-all",
                   "hover:bg-primary/90",
                 )}
                 whileHover={{ scale: 1.02 }}
@@ -147,6 +147,3 @@ export function TransactionStatusModal({
     </AnimatePresence>
   );
 }
-
-
-

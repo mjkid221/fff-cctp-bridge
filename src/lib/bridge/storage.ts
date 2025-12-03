@@ -76,7 +76,11 @@ export class BridgeStorage {
   ): Promise<BridgeTransaction[]> {
     const db = await getDB();
     // Normalize address to lowercase for consistency
-    return db.getAllFromIndex("transactions", "by-user", userAddress.toLowerCase());
+    return db.getAllFromIndex(
+      "transactions",
+      "by-user",
+      userAddress.toLowerCase(),
+    );
   }
 
   /**

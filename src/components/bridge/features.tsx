@@ -36,8 +36,8 @@ export function Features() {
       className="w-full max-w-6xl"
     >
       <div className="mb-8 text-center">
-        <h2 className="text-3xl font-bold text-foreground">Why CCTP Bridge?</h2>
-        <p className="mt-2 text-muted-foreground">
+        <h2 className="text-foreground text-3xl font-bold">Why CCTP Bridge?</h2>
+        <p className="text-muted-foreground mt-2">
           The most efficient way to move USDC across chains
         </p>
       </div>
@@ -53,24 +53,24 @@ export function Features() {
               transition={{ duration: 0.5, delay: 0.1 * index }}
               whileHover={{ y: -4 }}
               className={cn(
-                "group relative overflow-hidden rounded-2xl border border-border/50 bg-card/30 p-6 backdrop-blur-xl transition-all",
+                "group border-border/50 bg-card/30 relative overflow-hidden rounded-2xl border p-6 backdrop-blur-xl transition-all",
                 "hover:border-border hover:bg-card/50 hover:shadow-lg",
               )}
             >
               <div className="relative z-10">
-                <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10 transition-all group-hover:bg-primary/20">
-                  <Icon className="size-6 text-primary" />
+                <div className="bg-primary/10 group-hover:bg-primary/20 mb-4 flex size-12 items-center justify-center rounded-xl transition-all">
+                  <Icon className="text-primary size-6" />
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-foreground">
+                <h3 className="text-foreground mb-2 text-lg font-semibold">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {feature.description}
                 </p>
               </div>
 
               {/* Hover gradient effect */}
-              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="from-primary/5 absolute inset-0 -z-10 bg-gradient-to-br via-transparent to-purple-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
             </motion.div>
           );
         })}
@@ -78,6 +78,3 @@ export function Features() {
     </motion.div>
   );
 }
-
-
-

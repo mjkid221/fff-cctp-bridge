@@ -94,7 +94,7 @@ export function BridgeHeader() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "h-10 border-border/50 bg-card/50 rounded-xl backdrop-blur-xl",
+                      "border-border/50 bg-card/50 h-10 rounded-xl backdrop-blur-xl",
                       "hover:bg-card/80 flex items-center gap-2 px-3",
                     )}
                   >
@@ -131,7 +131,7 @@ export function BridgeHeader() {
                 onClick={() => setShowAuthFlow(true)}
                 variant="outline"
                 className={cn(
-                  "h-10 border-border/50 bg-card/50 rounded-xl backdrop-blur-xl",
+                  "border-border/50 bg-card/50 h-10 rounded-xl backdrop-blur-xl",
                   "hover:bg-card/80 flex items-center gap-2 px-3",
                 )}
               >

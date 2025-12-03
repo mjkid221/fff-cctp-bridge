@@ -34,7 +34,7 @@ export function ThemeTransition() {
             duration: 1,
             ease: [0.645, 0.045, 0.355, 1.0], // Custom easing for smooth dial effect
           }}
-          className={`fixed inset-0 z-[100] pointer-events-none ${
+          className={`pointer-events-none fixed inset-0 z-[100] ${
             currentTheme === "dark"
               ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
               : "bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
@@ -47,7 +47,7 @@ export function ThemeTransition() {
           {currentTheme === "dark" ? (
             <>
               {/* Stars appearing */}
-              {[...Array(20) as unknown[]].map((_, i) => (
+              {[...(Array(20) as unknown[])].map((_, i) => (
                 <motion.div
                   key={`star-${i}`}
                   initial={{ opacity: 0, scale: 0 }}
@@ -70,18 +70,18 @@ export function ThemeTransition() {
                 initial={{ opacity: 0, scale: 0, rotate: -45 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="absolute right-[20%] top-[20%] size-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 shadow-2xl shadow-slate-400/50"
+                className="absolute top-[20%] right-[20%] size-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-400 shadow-2xl shadow-slate-400/50"
               >
                 {/* Moon craters */}
-                <div className="absolute left-[20%] top-[30%] size-4 rounded-full bg-slate-300/40" />
-                <div className="absolute right-[25%] top-[50%] size-3 rounded-full bg-slate-300/40" />
-                <div className="absolute left-[40%] top-[60%] size-2 rounded-full bg-slate-300/40" />
+                <div className="absolute top-[30%] left-[20%] size-4 rounded-full bg-slate-300/40" />
+                <div className="absolute top-[50%] right-[25%] size-3 rounded-full bg-slate-300/40" />
+                <div className="absolute top-[60%] left-[40%] size-2 rounded-full bg-slate-300/40" />
               </motion.div>
             </>
           ) : (
             <>
               {/* Clouds */}
-              {[...Array(5) as unknown[]].map((_, i) => (
+              {[...(Array(5) as unknown[])].map((_, i) => (
                 <motion.div
                   key={`cloud-${i}`}
                   initial={{ opacity: 0, x: -100 }}
@@ -107,11 +107,11 @@ export function ThemeTransition() {
                 initial={{ opacity: 0, scale: 0, rotate: -180 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="absolute right-[20%] top-[20%]"
+                className="absolute top-[20%] right-[20%]"
               >
                 <div className="relative size-24">
                   {/* Sun rays */}
-                  {[...Array(12) as unknown[]].map((_, i) => (
+                  {[...(Array(12) as unknown[])].map((_, i) => (
                     <motion.div
                       key={`ray-${i}`}
                       initial={{ opacity: 0, scale: 0 }}
@@ -126,7 +126,7 @@ export function ThemeTransition() {
                         repeatType: "reverse",
                         repeatDelay: 0.5,
                       }}
-                      className="absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-t from-yellow-400 to-transparent"
+                      className="absolute top-1/2 left-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-t from-yellow-400 to-transparent"
                       style={{
                         transform: `rotate(${i * 30}deg) translateY(-40px)`,
                         transformOrigin: "50% 40px",

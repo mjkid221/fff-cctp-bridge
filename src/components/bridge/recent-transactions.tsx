@@ -1,9 +1,21 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ExternalLink, ArrowRight, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  ExternalLink,
+  ArrowRight,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import { cn } from "~/lib/utils";
-import { useTransactionHistory, useRetryBridge, NETWORK_CONFIGS, useEnvironment } from "~/lib/bridge";
+import {
+  useTransactionHistory,
+  useRetryBridge,
+  NETWORK_CONFIGS,
+  useEnvironment,
+} from "~/lib/bridge";
 import { Button } from "~/components/ui/button";
 
 function formatTimestamp(timestamp: number): string {
@@ -43,7 +55,7 @@ export function RecentTransactions() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-4xl text-center text-muted-foreground"
+        className="text-muted-foreground w-full max-w-4xl text-center"
       >
         Loading transactions...
       </motion.div>
@@ -55,7 +67,7 @@ export function RecentTransactions() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-4xl text-center text-muted-foreground"
+        className="text-muted-foreground w-full max-w-4xl text-center"
       >
         No {environment} transactions yet
       </motion.div>
@@ -70,10 +82,10 @@ export function RecentTransactions() {
     >
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold text-foreground">
+          <h3 className="text-foreground text-2xl font-bold">
             Recent Transactions
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             Your latest {environment} bridge activity
           </p>
         </div>
@@ -104,7 +116,7 @@ export function RecentTransactions() {
               transition={{ duration: 0.3, delay: index * 0.1 }}
               whileHover={{ scale: 1.01, x: 4 }}
               className={cn(
-                "group relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 p-4 backdrop-blur-xl transition-all",
+                "group border-border/50 bg-card/50 relative overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-all",
                 "hover:border-border hover:bg-card/80 hover:shadow-lg",
               )}
             >
@@ -119,19 +131,25 @@ export function RecentTransactions() {
                       isFailed && "bg-red-500/10",
                     )}
                   >
-                    {isCompleted && <CheckCircle2 className="size-5 text-green-500" />}
-                    {isPending && <Clock className="size-5 animate-pulse text-blue-500" />}
-                    {isFailed && <AlertCircle className="size-5 text-red-500" />}
+                    {isCompleted && (
+                      <CheckCircle2 className="size-5 text-green-500" />
+                    )}
+                    {isPending && (
+                      <Clock className="size-5 animate-pulse text-blue-500" />
+                    )}
+                    {isFailed && (
+                      <AlertCircle className="size-5 text-red-500" />
+                    )}
                   </div>
 
                   {/* Transaction Details */}
                   <div>
-                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <div className="text-foreground flex items-center gap-2 text-sm font-medium">
                       <span>{fromNetwork?.displayName}</span>
-                      <ArrowRight className="size-4 text-muted-foreground" />
+                      <ArrowRight className="text-muted-foreground size-4" />
                       <span>{toNetwork?.displayName}</span>
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
                       <span>{tx.amount} USDC</span>
                       <span>•</span>
                       <span>{formatTimestamp(tx.createdAt)}</span>
@@ -159,7 +177,7 @@ export function RecentTransactions() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className={cn(
-                        "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors",
+                        "text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
                         "hover:bg-muted/50 hover:text-foreground",
                       )}
                       whileHover={{ scale: 1.05 }}
@@ -181,4 +199,3 @@ export function RecentTransactions() {
     </motion.div>
   );
 }
-

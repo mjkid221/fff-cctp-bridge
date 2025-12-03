@@ -212,18 +212,20 @@ export function BridgeCard() {
             <div className="relative z-10 space-y-2">
               {/* Label with checkbox toggle */}
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-muted-foreground">
+                <label className="text-muted-foreground text-sm font-medium">
                   Destination Wallet
                 </label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="custom-address"
                     checked={useCustomAddress}
-                    onCheckedChange={(checked) => setUseCustomAddress(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setUseCustomAddress(checked === true)
+                    }
                   />
                   <label
                     htmlFor="custom-address"
-                    className="text-xs font-medium leading-none cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-muted-foreground hover:text-foreground cursor-pointer text-xs leading-none font-medium transition-colors"
                   >
                     Use custom address
                   </label>

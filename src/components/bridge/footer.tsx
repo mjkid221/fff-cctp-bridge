@@ -28,20 +28,20 @@ export function Footer() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.6 }}
-      className="w-full border-t border-border/50 bg-card/30 backdrop-blur-xl"
+      className="border-border/50 bg-card/30 w-full border-t backdrop-blur-xl"
     >
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           {/* Logo and description */}
           <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple-600">
+            <div className="from-primary flex size-8 items-center justify-center rounded-lg bg-gradient-to-br to-purple-600">
               <span className="text-lg font-bold text-white">◈</span>
             </div>
             <div>
-              <div className="text-sm font-semibold text-foreground">
+              <div className="text-foreground text-sm font-semibold">
                 CCTP Bridge
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 Powered by Circle
               </div>
             </div>
@@ -58,21 +58,21 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    "flex size-10 items-center justify-center rounded-lg border border-border/50 bg-card/50 transition-all",
+                    "border-border/50 bg-card/50 flex size-10 items-center justify-center rounded-lg border transition-all",
                     "hover:border-border hover:bg-card",
                   )}
                   whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   aria-label={link.label}
                 >
-                  <Icon className="size-4 text-muted-foreground" />
+                  <Icon className="text-muted-foreground size-4" />
                 </motion.a>
               );
             })}
           </div>
 
           {/* Copyright */}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             © 2025 CCTP Bridge. All rights reserved.
           </div>
         </div>
@@ -80,6 +80,3 @@ export function Footer() {
     </motion.footer>
   );
 }
-
-
-

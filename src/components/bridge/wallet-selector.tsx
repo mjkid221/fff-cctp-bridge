@@ -98,12 +98,14 @@ export function WalletSelector({
   if (compatibleWallets.length === 0) {
     return (
       <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-muted-foreground text-sm font-medium">
           {label}
         </label>
-        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        <div className="border-border/50 bg-muted/30 text-muted-foreground flex items-center gap-2 rounded-xl border px-4 py-3 text-sm">
           <Wallet className="size-4" />
-          <span>No compatible {networkType?.toUpperCase()} wallets connected</span>
+          <span>
+            No compatible {networkType?.toUpperCase()} wallets connected
+          </span>
         </div>
       </div>
     );
@@ -112,7 +114,7 @@ export function WalletSelector({
   return (
     <div className="relative space-y-2" ref={dropdownRef}>
       {label && (
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-muted-foreground text-sm font-medium">
           {label}
         </label>
       )}
@@ -120,7 +122,7 @@ export function WalletSelector({
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/50 px-4 py-3 text-left backdrop-blur-xl transition-all",
+          "border-border/50 bg-card/50 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left backdrop-blur-xl transition-all",
           "hover:border-border hover:bg-card/80",
           isOpen && "border-border bg-card/80",
         )}
@@ -134,15 +136,15 @@ export function WalletSelector({
           <div className="flex flex-col">
             {selectedWallet ? (
               <>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-foreground text-sm font-medium">
                   {getWalletName(selectedWallet)}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {formatAddress(selectedWallet.address)}
                 </span>
               </>
             ) : (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 {placeholder}
               </span>
             )}
@@ -150,7 +152,7 @@ export function WalletSelector({
         </div>
         <ChevronDown
           className={cn(
-            "size-4 text-muted-foreground transition-transform",
+            "text-muted-foreground size-4 transition-transform",
             isOpen && "rotate-180",
           )}
         />
@@ -163,7 +165,7 @@ export function WalletSelector({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border/50 bg-card/95 shadow-xl backdrop-blur-xl"
+            className="border-border/50 bg-card/95 absolute z-50 mt-2 w-full overflow-hidden rounded-xl border shadow-xl backdrop-blur-xl"
           >
             <div className="max-h-60 overflow-y-auto p-1">
               {compatibleWallets.map((wallet) => (
@@ -185,10 +187,10 @@ export function WalletSelector({
                       <Wallet className="size-4 text-blue-500" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-foreground text-sm font-medium">
                         {getWalletName(wallet)}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {formatAddress(wallet.address)}
                       </span>
                     </div>

@@ -95,7 +95,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="size-10 rounded-xl border border-border/50 bg-card/50" />
+      <div className="border-border/50 bg-card/50 size-10 rounded-xl border" />
     );
   }
 
@@ -106,8 +106,8 @@ export function ThemeToggle() {
       aria-label="Toggle theme"
       type="button"
       className={cn(
-        "relative flex size-10 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-card/50 backdrop-blur-xl transition-all",
-        "hover:border-border hover:bg-card/80 focus:outline-none focus:ring-0 cursor-pointer",
+        "border-border/50 bg-card/50 relative flex size-10 items-center justify-center overflow-hidden rounded-xl border backdrop-blur-xl transition-all",
+        "hover:border-border hover:bg-card/80 cursor-pointer focus:ring-0 focus:outline-none",
       )}
     >
       <AnimatePresence mode="wait" initial={false}>
@@ -119,7 +119,7 @@ export function ThemeToggle() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.33 }}
           >
-            <Sun className="size-5 text-foreground" />
+            <Sun className="text-foreground size-5" />
           </motion.span>
         ) : (
           <motion.span
@@ -129,13 +129,10 @@ export function ThemeToggle() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.33 }}
           >
-            <Moon className="size-5 text-foreground" />
+            <Moon className="text-foreground size-5" />
           </motion.span>
         )}
       </AnimatePresence>
     </button>
   );
 }
-
-
-

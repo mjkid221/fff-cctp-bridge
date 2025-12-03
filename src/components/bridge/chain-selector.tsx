@@ -35,15 +35,15 @@ export function ChainSelector({
 
   return (
     <div className="relative">
-      <label className="mb-2 block text-sm font-medium text-muted-foreground">
+      <label className="text-muted-foreground mb-2 block text-sm font-medium">
         {label}
       </label>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "group relative w-full overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-xl transition-all",
+          "group border-border/50 bg-card/50 relative w-full overflow-hidden rounded-2xl border backdrop-blur-xl transition-all",
           "hover:border-border hover:bg-card/80",
-          "focus:outline-none focus:ring-2 focus:ring-ring/20",
+          "focus:ring-ring/20 focus:ring-2 focus:outline-none",
         )}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
@@ -62,16 +62,16 @@ export function ChainSelector({
                 {selected.icon}
               </motion.div>
               <div className="flex-1 text-left">
-                <div className="text-sm font-medium text-foreground">
+                <div className="text-foreground text-sm font-medium">
                   {selected.displayName}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   USDC on {selected.name}
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 text-left text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex-1 text-left text-sm">
               Select network
             </div>
           )}
@@ -79,7 +79,7 @@ export function ChainSelector({
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="size-5 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground size-5" />
           </motion.div>
         </div>
       </motion.button>
@@ -98,7 +98,7 @@ export function ChainSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-2xl"
+            className="border-border/50 bg-card/95 absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl"
           >
             <div className="space-y-1">
               {availableChains.map((chain, index) => (
@@ -128,10 +128,10 @@ export function ChainSelector({
                     {chain.icon}
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="text-sm font-medium text-foreground">
+                    <div className="text-foreground text-sm font-medium">
                       {chain.displayName}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       USDC on {chain.name}
                     </div>
                   </div>
@@ -144,5 +144,3 @@ export function ChainSelector({
     </div>
   );
 }
-
-

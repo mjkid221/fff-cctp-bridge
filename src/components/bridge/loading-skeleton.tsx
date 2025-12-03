@@ -14,11 +14,11 @@ export function LoadingSkeleton() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: i * 0.1 }}
           className={cn(
-            "h-24 overflow-hidden rounded-2xl border border-border/50 bg-card/50 backdrop-blur-xl",
+            "border-border/50 bg-card/50 h-24 overflow-hidden rounded-2xl border backdrop-blur-xl",
           )}
         >
           <motion.div
-            className="h-full w-full bg-gradient-to-r from-transparent via-muted/20 to-transparent"
+            className="via-muted/20 h-full w-full bg-gradient-to-r from-transparent to-transparent"
             animate={{
               x: ["-100%", "100%"],
             }}
@@ -33,6 +33,3 @@ export function LoadingSkeleton() {
     </div>
   );
 }
-
-
-
