@@ -1,5 +1,7 @@
 import type { AdapterContext, ChainDefinition } from "@circle-fin/bridge-kit";
 import type { SupportedChainId } from "./networks";
+import type { Wallet } from "node_modules/@dynamic-labs/sdk-react-core/src/lib/shared/types/wallets";
+import type { WalletConnectorCore } from "@dynamic-labs/wallet-connector-core";
 
 /**
  * Transaction status types
@@ -54,6 +56,29 @@ export interface BridgeTransaction {
 }
 
 /**
+ * Gas fee for a specific step
+ */
+export interface StepGasFee {
+  name: string; // e.g., "Approve", "Burn", "Mint"
+  token: string; // e.g., "ETH", "SOL"
+  blockchain: string; // e.g., "Base_Sepolia", "Arbitrum_Sepolia"
+  fees: {
+    gas: bigint;
+    gasPrice: bigint;
+    fee: string; // Formatted fee amount
+  };
+}
+
+/**
+ * Bridge provider fee
+ */
+export interface ProviderFee {
+  type: string; // e.g., "provider"
+  token: string; // e.g., "USDC"
+  amount: string; // e.g., "0.000001"
+}
+
+/**
  * Bridge estimate result
  */
 export interface BridgeEstimate {
@@ -68,6 +93,9 @@ export interface BridgeEstimate {
   };
   estimatedTime: number;
   receiveAmount: string;
+  // Detailed breakdown
+  detailedGasFees?: StepGasFee[];
+  providerFees?: ProviderFee[];
 }
 
 /**
@@ -98,7 +126,10 @@ export interface IBridgeService {
   /**
    * Initialize the bridge service with user wallet
    */
-  initialize(address: string): Promise<void>;
+  initialize(
+    wallet?: Wallet<WalletConnectorCore.WalletConnector>,
+    allWallets?: Wallet<WalletConnectorCore.WalletConnector>[],
+  ): Promise<void>;
   /**
    * Get token balance for a specific chain
    */

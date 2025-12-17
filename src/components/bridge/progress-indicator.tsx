@@ -71,3 +71,5 @@ export function ProgressIndicator({ steps }: ProgressIndicatorProps) {
     </div>
   );
 }
+
+

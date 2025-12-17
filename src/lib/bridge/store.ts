@@ -33,6 +33,10 @@ interface BridgeState {
   addTransaction: (transaction: BridgeTransaction) => void;
   updateTransaction: (id: string, updates: Partial<BridgeTransaction>) => void;
 
+  // Window management
+  activeWindow: "fee-details" | "transaction-history" | null;
+  setActiveWindow: (window: "fee-details" | "transaction-history" | null) => void;
+
   // Loading states
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
@@ -59,6 +63,7 @@ export const useBridgeStore = create<BridgeState>()(
       toChain: null,
       currentTransaction: null,
       transactions: [],
+      activeWindow: null,
       isLoading: false,
       error: null,
 
@@ -90,6 +95,9 @@ export const useBridgeStore = create<BridgeState>()(
       // Transaction
       setCurrentTransaction: (transaction) =>
         set({ currentTransaction: transaction }),
+
+      // Window management
+      setActiveWindow: (window) => set({ activeWindow: window }),
 
       // Transaction history
       setTransactions: (transactions) => set({ transactions }),
@@ -205,3 +213,8 @@ export const useTransactions = () =>
 
 export const useIsLoading = () => useBridgeStore((state) => state.isLoading);
 export const useError = () => useBridgeStore((state) => state.error);
+
+export const useActiveWindow = () =>
+  useBridgeStore((state) => state.activeWindow);
+export const useSetActiveWindow = () =>
+  useBridgeStore((state) => state.setActiveWindow);

@@ -3,7 +3,6 @@ import { AnimatedBackground } from "~/components/bridge/animated-background";
 import { BridgeHeader } from "~/components/bridge/header";
 import { Footer } from "~/components/bridge/footer";
 import { HydrateClient } from "~/trpc/server";
-import { RecentTransactions } from "~/components/bridge";
 
 export default function Home() {
   return (
@@ -16,9 +15,6 @@ export default function Home() {
 
           <div className="flex flex-1 flex-col items-center justify-center gap-12 px-4 py-12">
             <BridgeCard />
-            {/* <StatsCard /> */}
-            {/* <Features /> */}
-            <RecentTransactions />
           </div>
 
           <Footer />

@@ -17,6 +17,7 @@ import {
   useEnvironment,
 } from "~/lib/bridge";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
 
 function formatTimestamp(timestamp: number): string {
   const now = Date.now();
@@ -52,13 +53,31 @@ export function RecentTransactions() {
 
   if (isLoading && filteredTransactions.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-muted-foreground w-full max-w-4xl text-center"
-      >
-        Loading transactions...
-      </motion.div>
+      <div className="w-full max-w-4xl space-y-3">
+        {[1, 2, 3].map((i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="rounded-2xl border border-border/50 bg-card/50 p-4 backdrop-blur-xl"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-10 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
     );
   }
 

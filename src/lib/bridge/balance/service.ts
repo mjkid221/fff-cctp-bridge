@@ -110,6 +110,7 @@ export class BalanceService {
     chain: SupportedChainId,
     walletAddress: string,
   ): Promise<TokenBalance> {
+    console.log("chain: ", chain);
     try {
       // Use Circle's Solana adapter pattern for USDC balance
       // Based on @circle-fin/adapter-solana balanceOf implementation

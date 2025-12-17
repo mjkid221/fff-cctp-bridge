@@ -14,7 +14,7 @@ import type {
 import type { AdapterContext } from "@circle-fin/bridge-kit";
 import type { NetworkType } from "../networks";
 import { DynamicSolanaWalletAdapter } from "~/lib/solana/provider";
-import type { Connection } from "@solana/web3.js";
+import { Connection } from "@solana/web3.js";
 
 // Use the adapter type from Circle's bridge-kit
 type BridgeAdapter = AdapterContext["adapter"];
@@ -51,11 +51,7 @@ export class EVMAdapterCreator implements IAdapterCreator {
 
     const providerResult = await wallet.getWalletClient();
 
-    if (
-      !providerResult ||
-      providerResult instanceof Error ||
-      typeof providerResult !== "object"
-    ) {
+    if (!providerResult) {
       throw new Error("Failed to get EVM wallet client");
     }
 
@@ -86,12 +82,12 @@ export class SolanaAdapterCreator implements IAdapterCreator {
     if (!isSolanaWallet(wallet)) {
       throw new Error("Wallet is not a Solana wallet");
     }
-
-    // Create Dynamic Solana wallet provider adapter
+    // Create wrapper for Solana Wallet Provider class (for Dynamic)
     const solanaProvider = new DynamicSolanaWalletAdapter(wallet);
 
-    // Get Solana connection
-    const connection: Connection = await wallet.getConnection();
+    const connection = new Connection(
+      (await wallet.getConnection()).rpcEndpoint,
+    );
 
     // Create Solana adapter using Circle's factory
     return await createSolanaAdapter({

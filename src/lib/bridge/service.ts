@@ -28,10 +28,7 @@ import type { SupportedChainId } from "./networks";
 import { getAdapterFactory, type AdapterFactory } from "./adapters/factory";
 import { getBalanceService, type BalanceService } from "./balance/service";
 import type { TokenBalance } from "./balance/service";
-import {
-  getAttestationTime,
-  getAttestationTimeDisplay,
-} from "./attestation-times";
+import { getAttestationTime } from "./attestation-times";
 
 /**
  * Bridge service configuration
@@ -83,15 +80,14 @@ export class CCTPBridgeService implements IBridgeService {
    * Initialize the bridge service with user wallet
    */
   async initialize(
-    address: string,
     wallet?: Wallet<WalletConnectorCore.WalletConnector>,
     allWallets?: Wallet<WalletConnectorCore.WalletConnector>[],
   ): Promise<void> {
-    if (!address) {
+    if (!wallet?.address) {
       throw new Error("Address is required");
     }
 
-    this.userAddress = address.toLowerCase();
+    this.userAddress = wallet?.address;
     this.wallet = wallet ?? null;
     this.wallets = allWallets ?? (wallet ? [wallet] : []);
 
@@ -185,21 +181,58 @@ export class CCTPBridgeService implements IBridgeService {
       console.log("ESTIMATE--------; ", estimate);
 
       // Process the estimate result
-      const gasFee = estimate.gasFees[0];
-      const feeAmount = gasFee?.fees?.fee ?? "0";
+      const gasFees = estimate.gasFees ?? [];
+      const providerFees = estimate.fees ?? [];
+
+      // Calculate total gas fees
+      const totalGasFee = gasFees
+        .reduce((sum, fee) => {
+          const feeAmount = parseFloat(fee?.fees?.fee ?? "0");
+          return sum + feeAmount;
+        }, 0)
+        .toFixed(9);
+
+      // Calculate total provider fees
+      const totalProviderFee = providerFees
+        .reduce((sum, fee) => {
+          const feeAmount = parseFloat(fee?.amount ?? "0");
+          return sum + feeAmount;
+        }, 0)
+        .toFixed(6);
+
+      // Get first gas fee for network info
+      const firstGasFee = gasFees[0];
 
       return {
         fees: {
-          network: gasFee?.blockchain ?? "unknown",
+          network: firstGasFee?.blockchain ?? "unknown",
           bridge: "0", // CCTP has no bridge fees
-          total: feeAmount,
+          total: totalGasFee,
         },
         gasFees: {
-          source: feeAmount,
-          destination: feeAmount,
+          source: gasFees.find((f) => f.name === "Burn")?.fees?.fee ?? "0",
+          destination: gasFees.find((f) => f.name === "Mint")?.fees?.fee,
         },
         estimatedTime: getAttestationTime(params.fromChain), // Chain-specific attestation time
-        receiveAmount: params.amount, // 1:1 for USDC
+        receiveAmount: (
+          parseFloat(params.amount) - parseFloat(totalProviderFee)
+        ).toString(), // Subtract provider fees
+        // Add detailed breakdown
+        detailedGasFees: gasFees.map((fee) => ({
+          name: fee.name,
+          token: fee.token,
+          blockchain: fee.blockchain,
+          fees: {
+            gas: fee.fees?.gas ?? 0n,
+            gasPrice: fee.fees?.gasPrice ?? 0n,
+            fee: fee.fees?.fee ?? "0",
+          },
+        })),
+        providerFees: providerFees.map((fee) => ({
+          type: fee.type,
+          token: fee.token,
+          amount: fee.amount ?? "0",
+        })),
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";

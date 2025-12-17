@@ -26,8 +26,8 @@ export function DestinationAddressInput({
   onChange,
   onValidationChange,
   useCustomAddress,
-  onToggleCustomAddress,
-  connectedWalletAddress,
+  onToggleCustomAddress: _onToggleCustomAddress,
+  connectedWalletAddress: _connectedWalletAddress,
 }: DestinationAddressInputProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValid, setIsValid] = useState(false);

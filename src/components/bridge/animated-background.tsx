@@ -1,8 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
 export function AnimatedBackground() {
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    // Start animations after initial render to reduce blocking
+    const timer = setTimeout(() => setShouldAnimate(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Base gradient */}
@@ -11,11 +20,15 @@ export function AnimatedBackground() {
       {/* Animated orbs */}
       <motion.div
         className="from-primary/20 absolute top-0 -left-1/4 size-96 rounded-full bg-gradient-to-br to-purple-500/20 blur-3xl"
-        animate={{
-          x: [0, 100, 0],
-          y: [0, 50, 0],
-          scale: [1, 1.2, 1],
-        }}
+        animate={
+          shouldAnimate
+            ? {
+                x: [0, 100, 0],
+                y: [0, 50, 0],
+                scale: [1, 1.2, 1],
+              }
+            : undefined
+        }
         transition={{
           duration: 20,
           repeat: Infinity,
@@ -24,11 +37,15 @@ export function AnimatedBackground() {
       />
       <motion.div
         className="absolute top-1/4 -right-1/4 size-96 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 blur-3xl"
-        animate={{
-          x: [0, -100, 0],
-          y: [0, 100, 0],
-          scale: [1, 1.3, 1],
-        }}
+        animate={
+          shouldAnimate
+            ? {
+                x: [0, -100, 0],
+                y: [0, 100, 0],
+                scale: [1, 1.3, 1],
+              }
+            : undefined
+        }
         transition={{
           duration: 25,
           repeat: Infinity,
@@ -37,11 +54,15 @@ export function AnimatedBackground() {
       />
       <motion.div
         className="absolute bottom-0 left-1/3 size-96 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 blur-3xl"
-        animate={{
-          x: [0, -50, 0],
-          y: [0, -50, 0],
-          scale: [1, 1.1, 1],
-        }}
+        animate={
+          shouldAnimate
+            ? {
+                x: [0, -50, 0],
+                y: [0, -50, 0],
+                scale: [1, 1.1, 1],
+              }
+            : undefined
+        }
         transition={{
           duration: 18,
           repeat: Infinity,
@@ -61,3 +82,5 @@ export function AnimatedBackground() {
     </div>
   );
 }
+
+

@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { flushSync } from "react-dom";
 import { Moon, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "~/lib/utils";
 
 export function ThemeToggle() {
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -12,7 +11,6 @@ export function ThemeToggle() {
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
-    // Check localStorage first, then fall back to system preference
     const stored = localStorage.getItem("theme");
     if (stored) {
       return stored === "dark";
@@ -21,11 +19,9 @@ export function ThemeToggle() {
     return document.documentElement.classList.contains("dark");
   });
 
-  // Prevent hydration mismatch and initialize theme from localStorage
   useEffect(() => {
     setMounted(true);
 
-    // Apply stored theme on mount
     const stored = localStorage.getItem("theme");
     if (stored) {
       const isDarkTheme = stored === "dark";
@@ -34,7 +30,6 @@ export function ThemeToggle() {
     }
   }, []);
 
-  // Sync with theme changes from other sources
   useEffect(() => {
     const syncTheme = () =>
       setIsDark(document.documentElement.classList.contains("dark"));
@@ -50,9 +45,7 @@ export function ThemeToggle() {
   const toggleTheme = useCallback(async () => {
     if (!buttonRef.current) return;
 
-    // Check if View Transition API is supported
     if (!document.startViewTransition) {
-      // Fallback for browsers without View Transition API
       const toggled = !isDark;
       setIsDark(toggled);
       document.documentElement.classList.toggle("dark", toggled);
@@ -94,45 +87,44 @@ export function ThemeToggle() {
   }, [isDark]);
 
   if (!mounted) {
-    return (
-      <div className="border-border/50 bg-card/50 size-10 rounded-xl border" />
-    );
+    return <div className="size-4" />;
   }
 
   return (
-    <button
+    <motion.button
       ref={buttonRef}
+      whileHover={{ backgroundColor: "rgba(0,0,0,0.05)" }}
+      whileTap={{ scale: 0.98 }}
       onClick={toggleTheme}
       aria-label="Toggle theme"
       type="button"
-      className={cn(
-        "border-border/50 bg-card/50 relative flex size-10 items-center justify-center overflow-hidden rounded-xl border backdrop-blur-xl transition-all",
-        "hover:border-border hover:bg-card/80 cursor-pointer focus:ring-0 focus:outline-none",
-      )}
+      className="flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-muted/50 focus:outline-none"
     >
       <AnimatePresence mode="wait" initial={false}>
         {isDark ? (
           <motion.span
             key="sun-icon"
-            initial={{ opacity: 0, scale: 0.55, rotate: 25 }}
+            initial={{ opacity: 0, scale: 0.5, rotate: 90 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.33 }}
+            exit={{ opacity: 0, scale: 0.5, rotate: -90 }}
+            transition={{ duration: 0.2 }}
           >
-            <Sun className="text-foreground size-5" />
+            <Sun className="text-foreground size-4" />
           </motion.span>
         ) : (
           <motion.span
             key="moon-icon"
-            initial={{ opacity: 0, scale: 0.55, rotate: -25 }}
+            initial={{ opacity: 0, scale: 0.5, rotate: 90 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.33 }}
+            exit={{ opacity: 0, scale: 0.5, rotate: -90 }}
+            transition={{ duration: 0.2 }}
           >
-            <Moon className="text-foreground size-5" />
+            <Moon className="text-foreground size-4" />
           </motion.span>
         )}
       </AnimatePresence>
-    </button>
+    </motion.button>
   );
 }
+
+

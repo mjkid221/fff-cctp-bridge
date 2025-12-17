@@ -64,6 +64,8 @@ export {
   useTransactions,
   useIsLoading,
   useError,
+  useActiveWindow,
+  useSetActiveWindow,
 } from "./store";
 
 // Types
@@ -92,3 +94,5 @@ export type {
   NetworkType,
   NetworkConfig,
 } from "./networks";
+
+

@@ -7,7 +7,6 @@ import {
   useUserWallets,
   useSwitchWallet,
 } from "@dynamic-labs/sdk-react-core";
-import type { Wallet } from "@dynamic-labs/sdk-react-core";
 import { getBridgeService } from "./service";
 import { useBridgeStore } from "./store";
 import type { BridgeParams, BridgeEstimate, BridgeTransaction } from "./types";
@@ -29,11 +28,7 @@ export function useBridgeInit() {
         const service = getBridgeService();
 
         // Pass the primary wallet and all connected wallets to the service
-        await service.initialize(
-          primaryWallet.address,
-          primaryWallet,
-          userWallets,
-        );
+        await service.initialize(primaryWallet, userWallets);
         setUserAddress(primaryWallet.address);
         await loadTransactions();
         setIsInitialized(true);
@@ -86,6 +81,7 @@ export function useBridge() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addTransaction = useBridgeStore((state) => state.addTransaction);
+  const updateTransaction = useBridgeStore((state) => state.updateTransaction);
   const setCurrentTransaction = useBridgeStore(
     (state) => state.setCurrentTransaction,
   );
@@ -99,9 +95,32 @@ export function useBridge() {
         const service = getBridgeService();
         const transaction = await service.bridge(params);
 
-        // Add to store
+        // Add to store and set as current
         addTransaction(transaction);
         setCurrentTransaction(transaction);
+
+        // Poll for updates while transaction is in progress
+        const pollInterval = setInterval(() => {
+          void (async () => {
+            const updated = await service.getTransaction(transaction.id);
+            if (updated) {
+              updateTransaction(transaction.id, updated);
+              setCurrentTransaction(updated);
+
+              // Stop polling when transaction is complete or failed
+              if (
+                updated.status === "completed" ||
+                updated.status === "failed" ||
+                updated.status === "cancelled"
+              ) {
+                clearInterval(pollInterval);
+              }
+            }
+          })();
+        }, 2000); // Poll every 2 seconds
+
+        // Cleanup interval after 15 minutes (max attestation time)
+        setTimeout(() => clearInterval(pollInterval), 15 * 60 * 1000);
 
         return transaction;
       } catch (err) {
@@ -113,7 +132,7 @@ export function useBridge() {
         setIsLoading(false);
       }
     },
-    [addTransaction, setCurrentTransaction],
+    [addTransaction, setCurrentTransaction, updateTransaction],
   );
 
   return { executeBridge, isLoading, error };
