@@ -6,18 +6,24 @@
  */
 
 import type { BridgeKit } from "@circle-fin/bridge-kit";
-import type { BridgeTransaction, BridgeStep } from "./types";
+import type { BridgeTransaction } from "./types";
 import type { BridgeStorage } from "./storage";
 
 /**
- * Event payload from Bridge Kit
+ * Extract the event payload type from BridgeKit's wildcard event handler
+ * This ensures type compatibility with the actual Bridge Kit event structure
  */
-interface BridgeEvent {
+type BridgeKitEventHandler = Parameters<Parameters<BridgeKit["on"]>[1]>[0];
+
+/**
+ * Normalized event structure for internal use
+ * Provides a simpler interface for handling Bridge Kit events
+ */
+interface NormalizedBridgeEvent {
   method: string;
   values?: {
     txHash?: string;
-    data?: string;
-    [key: string]: unknown;
+    data?: unknown;
   };
 }
 
@@ -44,13 +50,15 @@ export class BridgeEventManager {
    * Subscribe to all Bridge Kit events using wildcard listener
    */
   private setupEventListeners(): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = (event: any) => {
-      console.log(`[Bridge Event] ${event.method}:`, event.values);
-
+    const handler = (event: BridgeKitEventHandler) => {
+      // Normalize the event for internal handling
+      const normalizedEvent: NormalizedBridgeEvent = {
+        method: event.method,
+        values: event.values as NormalizedBridgeEvent["values"],
+      };
       // Update all tracked transactions based on event
       for (const [txId, callback] of this.trackedTransactions.entries()) {
-        void this.handleStepUpdate(txId, event as BridgeEvent, callback);
+        void this.handleStepUpdate(txId, normalizedEvent, callback);
       }
     };
 
@@ -65,7 +73,7 @@ export class BridgeEventManager {
    */
   private async handleStepUpdate(
     txId: string,
-    event: BridgeEvent,
+    event: NormalizedBridgeEvent,
     callback: (tx: BridgeTransaction) => void,
   ): Promise<void> {
     // Map event method to step ID
@@ -97,8 +105,8 @@ export class BridgeEventManager {
     }
 
     // Handle special case: attestation completes when fetchAttestation fires
-    if (stepId === "attestation" && event.values?.data) {
-      tx.attestationHash = String(event.values.data); // Circle's attestation
+    if (stepId === "attestation" && typeof event.values?.data === "string") {
+      tx.attestationHash = event.values.data; // Circle's attestation
     }
 
     // Step progression: When a step completes, mark the NEXT step as in_progress
@@ -114,17 +122,12 @@ export class BridgeEventManager {
       if (nextStep?.status === "pending") {
         nextStep.status = "in_progress";
         nextStep.timestamp = Date.now();
-        console.log(
-          `[Event Manager] ${stepId} completed, starting ${nextStepId} for tx ${txId.substring(0, 8)}...`,
-        );
       }
     }
 
     // Save to storage
     tx.updatedAt = Date.now();
     await this.storage.saveTransaction(tx);
-
-    console.log(`[Event Manager] Updated step ${stepId} for tx ${txId.substring(0, 8)}...`);
 
     // Notify callback for UI update
     callback(tx);
@@ -141,7 +144,6 @@ export class BridgeEventManager {
     callback: (tx: BridgeTransaction) => void,
   ): void {
     this.trackedTransactions.set(txId, callback);
-    console.log(`[Event Manager] Now tracking transaction ${txId.substring(0, 8)}...`);
   }
 
   /**
@@ -151,7 +153,6 @@ export class BridgeEventManager {
    */
   untrackTransaction(txId: string): void {
     this.trackedTransactions.delete(txId);
-    console.log(`[Event Manager] Stopped tracking transaction ${txId.substring(0, 8)}...`);
   }
 
   /**
@@ -159,8 +160,6 @@ export class BridgeEventManager {
    * Should be called when service is reset or disposed
    */
   dispose(): void {
-    console.log("[Event Manager] Disposing all event listeners");
-
     // Clean up all event listeners
     this.eventHandlers.forEach((cleanup) => cleanup());
     this.eventHandlers = [];

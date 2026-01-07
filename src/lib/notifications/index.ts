@@ -13,7 +13,6 @@ export {
   useUpdateNotification,
   useRemoveNotification,
   useMarkAsRead,
-  useMarkAllAsRead,
   useClearAllNotifications,
   useToggleNotificationPanel,
   useSetNotificationPanelOpen,

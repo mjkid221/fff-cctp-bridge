@@ -139,10 +139,6 @@ export interface IBridgeService {
   getBalance(chain: SupportedChainId): Promise<TokenBalance>;
 
   /**
-   * Get token balance for a specific chain
-   */
-  getBalance(chain: SupportedChainId): Promise<TokenBalance>;
-  /**
    * Estimate bridge costs
    */
   estimate(params: BridgeParams): Promise<BridgeEstimate>;

@@ -145,9 +145,6 @@ export const useRemoveNotification = () =>
 export const useMarkAsRead = () =>
   useNotificationStore((state) => state.markAsRead);
 
-export const useMarkAllAsRead = () =>
-  useNotificationStore((state) => state.markAllAsRead);
-
 export const useClearAllNotifications = () =>
   useNotificationStore((state) => state.clearAll);
 

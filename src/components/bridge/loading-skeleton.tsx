@@ -6,8 +6,7 @@ import { cn } from "~/lib/utils";
 export function LoadingSkeleton() {
   return (
     <div className="w-full max-w-lg space-y-4">
-      {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
-      {[...Array(3)].map((_, i) => (
+      {Array.from({ length: 3 }, (_, i) => i).map((i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, y: 20 }}

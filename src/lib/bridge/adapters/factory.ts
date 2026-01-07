@@ -56,11 +56,12 @@ export class EVMAdapterCreator implements IAdapterCreator {
     }
 
     // Create EVM adapter using Circle's factory
-    // Dynamic's wallet client is EIP-1193 compatible but types don't match exactly
-    // :P
+    // Dynamic's wallet client is EIP-1193 compatible but TypeScript types don't align exactly
+    // Use unknown as intermediate cast for type safety
     return await createEvmAdapter({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
-      provider: providerResult as any,
+      provider: providerResult as unknown as Parameters<
+        typeof createEvmAdapter
+      >[0]["provider"],
     });
   }
 }
@@ -84,8 +85,6 @@ export class SolanaAdapterCreator implements IAdapterCreator {
     }
     // Create wrapper for Solana Wallet Provider class (for Dynamic)
     const solanaProvider = new DynamicSolanaWalletAdapter(wallet);
-
-    console.log("WALLET ----- : ", await wallet.getConnection());
 
     const connection = new Connection(
       (await wallet.getConnection()).rpcEndpoint,
@@ -212,14 +211,4 @@ export function getAdapterFactory(): AdapterFactory {
     factoryInstance = new AdapterFactory();
   }
   return factoryInstance;
-}
-
-/**
- * Reset the adapter factory (useful for testing or account switching)
- */
-export function resetAdapterFactory(): void {
-  if (factoryInstance) {
-    factoryInstance.clearCache();
-  }
-  factoryInstance = null;
 }

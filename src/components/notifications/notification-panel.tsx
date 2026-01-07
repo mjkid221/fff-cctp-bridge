@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { Bell, Trash2 } from "lucide-react";
+import { Bell } from "lucide-react";
 import {
   useNotifications,
   useIsNotificationPanelOpen,

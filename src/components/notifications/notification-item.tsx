@@ -48,22 +48,6 @@ function getStatusIcon(status: Notification["status"]) {
   }
 }
 
-function getStatusColor(status: Notification["status"]) {
-  switch (status) {
-    case "success":
-      return "from-green-500/15 via-green-500/5 to-transparent border-green-500/30";
-    case "failed":
-      return "from-red-500/15 via-red-500/5 to-transparent border-red-500/30";
-    case "in_progress":
-      return "from-gray-500/15 via-gray-500/5 to-transparent border-gray-500/30 dark:border-gray-600/30";
-    case "pending":
-      return "from-yellow-500/15 via-yellow-500/5 to-transparent border-yellow-500/30";
-    case "info":
-    default:
-      return "from-gray-500/10 via-gray-500/5 to-transparent border-gray-500/20";
-  }
-}
-
 export function NotificationItem({ notification, onAction }: NotificationItemProps) {
   const removeNotification = useRemoveNotification();
   const markAsRead = useMarkAsRead();

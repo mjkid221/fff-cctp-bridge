@@ -183,8 +183,6 @@ export class CCTPBridgeService implements IBridgeService {
         amount: params.amount,
       });
 
-      console.log("ESTIMATE--------; ", estimate);
-
       // Process the estimate result
       const gasFees = estimate.gasFees ?? [];
       const providerFees = estimate.fees ?? [];
@@ -881,14 +879,4 @@ export function getBridgeService(): CCTPBridgeService {
     bridgeServiceInstance = new CCTPBridgeService();
   }
   return bridgeServiceInstance;
-}
-
-/**
- * Reset bridge service instance (useful for testing or account switching)
- */
-export function resetBridgeService(): void {
-  if (bridgeServiceInstance) {
-    bridgeServiceInstance.reset();
-  }
-  bridgeServiceInstance = null;
 }

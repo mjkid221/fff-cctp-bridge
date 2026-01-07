@@ -6,7 +6,6 @@
 // Core service
 export {
   getBridgeService,
-  resetBridgeService,
   CCTPBridgeService,
 } from "./service";
 export type { BridgeServiceConfig } from "./service";
@@ -17,7 +16,6 @@ export { BridgeEventManager } from "./event-manager";
 // Adapter factory
 export {
   getAdapterFactory,
-  resetAdapterFactory,
   AdapterFactory,
 } from "./adapters/factory";
 export type { IAdapterCreator } from "./adapters/factory";
@@ -120,7 +118,6 @@ export type {
 export {
   NETWORK_CONFIGS,
   getNetworksByEnvironment,
-  getNetworkCounterpart,
   isRouteSupported,
 } from "./networks";
 export type {

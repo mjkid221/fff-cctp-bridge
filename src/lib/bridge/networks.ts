@@ -174,34 +174,6 @@ export function getNetworksByEnvironment(
 }
 
 /**
- * Get mainnet equivalent of a testnet network (and vice versa)
- */
-export function getNetworkCounterpart(
-  chainId: SupportedChainId,
-): SupportedChainId | null {
-  const network = NETWORK_CONFIGS[chainId];
-  if (!network) return null;
-
-  const baseName = network.name.replace(" Sepolia", "").replace(" Devnet", "");
-
-  if (network.environment === "mainnet") {
-    // Find testnet equivalent
-    const testnetKey = Object.keys(NETWORK_CONFIGS).find((key) => {
-      const net = NETWORK_CONFIGS[key as SupportedChainId];
-      return net?.environment === "testnet" && net.name.startsWith(baseName);
-    });
-    return (testnetKey as SupportedChainId) ?? null;
-  } else {
-    // Find mainnet equivalent
-    const mainnetKey = Object.keys(NETWORK_CONFIGS).find((key) => {
-      const net = NETWORK_CONFIGS[key as SupportedChainId];
-      return net?.environment === "mainnet" && baseName.startsWith(net.name);
-    });
-    return (mainnetKey as SupportedChainId) ?? null;
-  }
-}
-
-/**
  * Check if a route is supported
  */
 export function isRouteSupported(

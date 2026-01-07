@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  motion,
-  AnimatePresence,
-  useDragControls,
-} from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { useState, useRef, useEffect } from "react";
 import {
   Wallet,
@@ -47,7 +43,6 @@ import {
   useEnvironment,
   DEFAULT_WINDOW_POSITIONS,
 } from "~/lib/bridge";
-import type { WindowType } from "~/lib/bridge";
 import {
   NotificationBell,
   NotificationPanel,
@@ -146,7 +141,13 @@ export function BridgeHeader() {
                     className="border-border/50 bg-card/95 w-56 backdrop-blur-xl"
                   >
                     <DropdownMenuItem
-                      onClick={() => window.open("https://faucet.circle.com/", "_blank", "noopener,noreferrer")}
+                      onClick={() =>
+                        window.open(
+                          "https://faucet.circle.com/",
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }
                       className="text-foreground hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
                     >
                       <span className="text-sm">Circle Faucet</span>
@@ -173,14 +174,26 @@ export function BridgeHeader() {
                   className="border-border/50 bg-card/95 w-56 backdrop-blur-xl"
                 >
                   <DropdownMenuItem
-                    onClick={() => window.open("https://github.com", "_blank", "noopener,noreferrer")}
+                    onClick={() =>
+                      window.open(
+                        "https://github.com",
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
                     className="text-foreground hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
                   >
                     <Github className="mr-2 size-4" />
                     <span className="text-sm">GitHub</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => window.open("https://twitter.com", "_blank", "noopener,noreferrer")}
+                    onClick={() =>
+                      window.open(
+                        "https://twitter.com",
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
                     className="text-foreground hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
                   >
                     <Twitter className="mr-2 size-4" />
@@ -188,7 +201,13 @@ export function BridgeHeader() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border/30" />
                   <DropdownMenuItem
-                    onClick={() => window.open("https://developers.circle.com/stablecoins/docs/cctp-getting-started", "_blank", "noopener,noreferrer")}
+                    onClick={() =>
+                      window.open(
+                        "https://developers.circle.com/stablecoins/docs/cctp-getting-started",
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
                     className="text-foreground hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
                   >
                     <FileText className="mr-2 size-4" />
@@ -381,7 +400,9 @@ export function BridgeHeader() {
       <AnimatePresence>
         {showDisclaimer && (
           <>
-            <DraggableDisclaimerWindow onClose={() => setShowDisclaimer(false)} />
+            <DraggableDisclaimerWindow
+              onClose={() => setShowDisclaimer(false)}
+            />
             <MobileDisclaimerDrawer onClose={() => setShowDisclaimer(false)} />
           </>
         )}
@@ -741,11 +762,11 @@ function DraggableDisclaimerWindow({ onClose }: { onClose: () => void }) {
   const isActive = activeWindow === "disclaimer";
   const zIndex = isActive ? "z-30" : "z-20";
 
-  const defaultPosition = DEFAULT_WINDOW_POSITIONS["disclaimer"];
+  const defaultPosition = DEFAULT_WINDOW_POSITIONS.disclaimer;
   const dimensions = getWindowDimensions("disclaimer", false);
 
   const savedPosition = hasHydrated
-    ? windowPositions["disclaimer"]
+    ? windowPositions.disclaimer
     : defaultPosition;
   const initialPosition = validateOrResetPosition(
     savedPosition,
@@ -780,9 +801,15 @@ function DraggableDisclaimerWindow({ onClose }: { onClose: () => void }) {
     if (windowRef.current) {
       const rect = windowRef.current.getBoundingClientRect();
       const draggedPosition = { x: rect.left, y: rect.top };
-      const constrainedPosition = constrainToViewport(draggedPosition, dimensions);
+      const constrainedPosition = constrainToViewport(
+        draggedPosition,
+        dimensions,
+      );
       setCurrentPosition(draggedPosition);
-      if (draggedPosition.x !== constrainedPosition.x || draggedPosition.y !== constrainedPosition.y) {
+      if (
+        draggedPosition.x !== constrainedPosition.x ||
+        draggedPosition.y !== constrainedPosition.y
+      ) {
         setTimeout(() => setCurrentPosition(constrainedPosition), 0);
       }
       setWindowPosition("disclaimer", constrainedPosition);
@@ -807,8 +834,18 @@ function DraggableDisclaimerWindow({ onClose }: { onClose: () => void }) {
       dragMomentum={false}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      initial={{ opacity: 0, scale: 0.95, x: initialPosition.x, y: initialPosition.y }}
-      animate={{ opacity: 1, scale: 1, x: currentPosition.x, y: currentPosition.y }}
+      initial={{
+        opacity: 0,
+        scale: 0.95,
+        x: initialPosition.x,
+        y: initialPosition.y,
+      }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        x: currentPosition.x,
+        y: currentPosition.y,
+      }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
       transition={{ type: "spring", damping: 30, stiffness: 300 }}
       className={cn("fixed top-0 left-0 hidden lg:block", zIndex)}
@@ -860,7 +897,10 @@ function DraggableDisclaimerWindow({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <motion.div
-          animate={{ height: isMinimized ? 0 : "auto", opacity: isMinimized ? 0 : 1 }}
+          animate={{
+            height: isMinimized ? 0 : "auto",
+            opacity: isMinimized ? 0 : 1,
+          }}
           transition={{ duration: 0.2 }}
           className="overflow-hidden"
         >
@@ -869,36 +909,49 @@ function DraggableDisclaimerWindow({ onClose }: { onClose: () => void }) {
               <div className="flex size-10 items-center justify-center rounded-full bg-amber-500/10">
                 <AlertTriangle className="size-5 text-amber-500" />
               </div>
-              <h3 className="text-foreground text-lg font-semibold">Important Notice</h3>
+              <h3 className="text-foreground text-lg font-semibold">
+                Important Notice
+              </h3>
             </div>
 
             <div className="text-muted-foreground space-y-3 text-sm leading-relaxed">
               <p>
-                This is an <strong className="text-foreground">unofficial, open-source user interface</strong> for
-                Circle&apos;s Cross-Chain Transfer Protocol (CCTP). This application is not developed,
-                maintained, or endorsed by Circle Internet Financial, LLC.
+                This is an{" "}
+                <strong className="text-foreground">
+                  unofficial, open-source user interface
+                </strong>{" "}
+                for Circle&apos;s Cross-Chain Transfer Protocol (CCTP). This
+                application is not developed, maintained, or endorsed by Circle
+                Internet Financial, LLC.
               </p>
 
               <p>
-                <strong className="text-foreground">Unaudited Software:</strong> This software has not undergone
-                a formal security audit. While we strive for security best practices, users should be aware
+                <strong className="text-foreground">Unaudited Software:</strong>{" "}
+                This software has not undergone a formal security audit. While
+                we strive for security best practices, users should be aware
                 that undiscovered vulnerabilities may exist.
               </p>
 
               <p>
-                <strong className="text-foreground">Use at Your Own Risk:</strong> By using this application,
-                you acknowledge and accept all risks associated with blockchain transactions, including but
-                not limited to loss of funds, failed transactions, and smart contract vulnerabilities.
+                <strong className="text-foreground">
+                  Use at Your Own Risk:
+                </strong>{" "}
+                By using this application, you acknowledge and accept all risks
+                associated with blockchain transactions, including but not
+                limited to loss of funds, failed transactions, and smart
+                contract vulnerabilities.
               </p>
 
               <p>
-                <strong className="text-foreground">No Warranty:</strong> This software is provided &quot;as is&quot;
-                without warranty of any kind, express or implied. The developers assume no liability for any
-                damages arising from the use of this application.
+                <strong className="text-foreground">No Warranty:</strong> This
+                software is provided &quot;as is&quot; without warranty of any
+                kind, express or implied. The developers assume no liability for
+                any damages arising from the use of this application.
               </p>
 
               <p className="text-muted-foreground/70 text-xs">
-                Always verify transaction details before confirming. Never bridge more than you can afford to lose.
+                Always verify transaction details before confirming. Never
+                bridge more than you can afford to lose.
               </p>
             </div>
           </div>
@@ -931,9 +984,23 @@ function MobileDisclaimerDrawer({ onClose }: { onClose: () => void }) {
         </div>
         <div className="border-border/30 flex items-center justify-between border-b px-4 pb-3">
           <h3 className="text-foreground text-lg font-semibold">Disclaimer</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -945,10 +1012,25 @@ function MobileDisclaimerDrawer({ onClose }: { onClose: () => void }) {
             <h3 className="text-foreground font-semibold">Important Notice</h3>
           </div>
           <div className="text-muted-foreground space-y-3 text-sm">
-            <p>This is an <strong className="text-foreground">unofficial, open-source UI</strong> for Circle&apos;s CCTP.</p>
-            <p><strong className="text-foreground">Unaudited:</strong> Not formally security audited.</p>
-            <p><strong className="text-foreground">Use at Your Own Risk:</strong> You accept all blockchain transaction risks.</p>
-            <p><strong className="text-foreground">No Warranty:</strong> Provided &quot;as is&quot; without warranty.</p>
+            <p>
+              This is an{" "}
+              <strong className="text-foreground">
+                unofficial, open-source UI
+              </strong>{" "}
+              for Circle&apos;s CCTP.
+            </p>
+            <p>
+              <strong className="text-foreground">Unaudited:</strong> Not
+              formally security audited.
+            </p>
+            <p>
+              <strong className="text-foreground">Use at Your Own Risk:</strong>{" "}
+              You accept all blockchain transaction risks.
+            </p>
+            <p>
+              <strong className="text-foreground">No Warranty:</strong> Provided
+              &quot;as is&quot; without warranty.
+            </p>
           </div>
         </div>
       </motion.div>
@@ -1023,13 +1105,21 @@ function PongGame() {
       }
 
       // Ball collision with player paddle
-      if (ballX <= 18 + ballSize && ballY >= playerY && ballY <= playerY + paddleHeight) {
+      if (
+        ballX <= 18 + ballSize &&
+        ballY >= playerY &&
+        ballY <= playerY + paddleHeight
+      ) {
         ballSpeedX = Math.abs(ballSpeedX) * 1.05;
         ballSpeedY += (ballY - (playerY + paddleHeight / 2)) * 0.1;
       }
 
       // Ball collision with computer paddle
-      if (ballX >= canvas.width - 26 && ballY >= computerY && ballY <= computerY + paddleHeight) {
+      if (
+        ballX >= canvas.width - 26 &&
+        ballY >= computerY &&
+        ballY <= computerY + paddleHeight
+      ) {
         ballSpeedX = -Math.abs(ballSpeedX) * 1.05;
         ballSpeedY += (ballY - (computerY + paddleHeight / 2)) * 0.1;
       }
@@ -1038,18 +1128,21 @@ function PongGame() {
       const computerCenter = computerY + paddleHeight / 2;
       if (computerCenter < ballY - 20) computerY += 3;
       if (computerCenter > ballY + 20) computerY -= 3;
-      computerY = Math.max(0, Math.min(canvas.height - paddleHeight, computerY));
+      computerY = Math.max(
+        0,
+        Math.min(canvas.height - paddleHeight, computerY),
+      );
 
       // Score
       if (ballX <= 0) {
-        setScore(s => ({ ...s, computer: s.computer + 1 }));
+        setScore((s) => ({ ...s, computer: s.computer + 1 }));
         ballX = canvas.width / 2;
         ballY = canvas.height / 2;
         ballSpeedX = 4;
         ballSpeedY = 2;
       }
       if (ballX >= canvas.width) {
-        setScore(s => ({ ...s, player: s.player + 1 }));
+        setScore((s) => ({ ...s, player: s.player + 1 }));
         ballX = canvas.width / 2;
         ballY = canvas.height / 2;
         ballSpeedX = -4;
@@ -1082,10 +1175,10 @@ function PongGame() {
           ref={canvasRef}
           width={400}
           height={250}
-          className="rounded-lg border border-border/50"
+          className="border-border/50 rounded-lg border"
         />
         {!gameStarted && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
             <Button onClick={() => setGameStarted(true)} className="gap-2">
               <Gamepad2 className="size-4" />
               Start Game
@@ -1093,7 +1186,9 @@ function PongGame() {
           </div>
         )}
       </div>
-      <p className="text-muted-foreground text-xs">Move your mouse to control the left paddle</p>
+      <p className="text-muted-foreground text-xs">
+        Move your mouse to control the left paddle
+      </p>
     </div>
   );
 }
@@ -1113,12 +1208,10 @@ function DraggablePongWindow({ onClose }: { onClose: () => void }) {
   const isActive = activeWindow === "pong";
   const zIndex = isActive ? "z-30" : "z-20";
 
-  const defaultPosition = DEFAULT_WINDOW_POSITIONS["pong"];
+  const defaultPosition = DEFAULT_WINDOW_POSITIONS.pong;
   const dimensions = getWindowDimensions("pong", false);
 
-  const savedPosition = hasHydrated
-    ? windowPositions["pong"]
-    : defaultPosition;
+  const savedPosition = hasHydrated ? windowPositions.pong : defaultPosition;
   const initialPosition = validateOrResetPosition(
     savedPosition,
     dimensions,
@@ -1152,9 +1245,15 @@ function DraggablePongWindow({ onClose }: { onClose: () => void }) {
     if (windowRef.current) {
       const rect = windowRef.current.getBoundingClientRect();
       const draggedPosition = { x: rect.left, y: rect.top };
-      const constrainedPosition = constrainToViewport(draggedPosition, dimensions);
+      const constrainedPosition = constrainToViewport(
+        draggedPosition,
+        dimensions,
+      );
       setCurrentPosition(draggedPosition);
-      if (draggedPosition.x !== constrainedPosition.x || draggedPosition.y !== constrainedPosition.y) {
+      if (
+        draggedPosition.x !== constrainedPosition.x ||
+        draggedPosition.y !== constrainedPosition.y
+      ) {
         setTimeout(() => setCurrentPosition(constrainedPosition), 0);
       }
       setWindowPosition("pong", constrainedPosition);
@@ -1179,8 +1278,18 @@ function DraggablePongWindow({ onClose }: { onClose: () => void }) {
       dragMomentum={false}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      initial={{ opacity: 0, scale: 0.95, x: initialPosition.x, y: initialPosition.y }}
-      animate={{ opacity: 1, scale: 1, x: currentPosition.x, y: currentPosition.y }}
+      initial={{
+        opacity: 0,
+        scale: 0.95,
+        x: initialPosition.x,
+        y: initialPosition.y,
+      }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        x: currentPosition.x,
+        y: currentPosition.y,
+      }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
       transition={{ type: "spring", damping: 30, stiffness: 300 }}
       className={cn("fixed top-0 left-0 hidden lg:block", zIndex)}
@@ -1232,7 +1341,10 @@ function DraggablePongWindow({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <motion.div
-          animate={{ height: isMinimized ? 0 : "auto", opacity: isMinimized ? 0 : 1 }}
+          animate={{
+            height: isMinimized ? 0 : "auto",
+            opacity: isMinimized ? 0 : 1,
+          }}
           transition={{ duration: 0.2 }}
           className="overflow-hidden"
         >
@@ -1268,9 +1380,23 @@ function MobilePongDrawer({ onClose }: { onClose: () => void }) {
         </div>
         <div className="border-border/30 flex items-center justify-between border-b px-4 pb-3">
           <h3 className="text-foreground text-lg font-semibold">Pong</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground -mr-2 rounded-full p-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>

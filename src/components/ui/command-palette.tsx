@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
-import { useBridgeStore, useEnvironment, useSetEnvironment } from "~/lib/bridge";
+import { useEnvironment, useSetEnvironment } from "~/lib/bridge";
 
 interface CommandPaletteProps {
   onOpenTransactionHistory: () => void;

@@ -118,9 +118,6 @@ function MultiWindowBridgeProgress({
   const { retryBridge, isRetrying } = useRetryBridge();
   const updateNotification = useUpdateNotification();
   const notifications = useNotifications();
-  const updateTransactionInStore = useBridgeStore(
-    (state) => state.updateTransaction,
-  );
   const setCurrentTransaction = useBridgeStore(
     (state) => state.setCurrentTransaction,
   );
@@ -554,7 +551,7 @@ function MultiWindowBridgeProgress({
                         {step.id === "attestation" &&
                           step.status === "in_progress" && (
                             <p className="text-muted-foreground text-[10px]">
-                              Waiting for Circle's attestation service (may take
+                              Waiting for Circle&apos;s attestation service (may take
                               a few minutes)
                             </p>
                           )}

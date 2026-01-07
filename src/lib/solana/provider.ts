@@ -29,9 +29,13 @@ export interface SolanaWalletProvider {
   /** Disconnect from the wallet */
   disconnect(): Promise<void>;
   /** Sign a transaction */
-  signTransaction(transaction: unknown): Promise<unknown>;
+  signTransaction<T extends Transaction | VersionedTransaction>(
+    transaction: T,
+  ): Promise<T>;
   /** Sign multiple transactions */
-  signAllTransactions?(transactions: unknown[]): Promise<unknown[]>;
+  signAllTransactions?<T extends Transaction | VersionedTransaction>(
+    transactions: T[],
+  ): Promise<T[]>;
   /** Sign a message */
   signMessage?(message: Uint8Array): Promise<{
     signature: Uint8Array;

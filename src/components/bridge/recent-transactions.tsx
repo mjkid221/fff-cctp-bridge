@@ -31,7 +31,7 @@ function formatTimestamp(timestamp: number): string {
 }
 
 export function RecentTransactions() {
-  const { transactions, isLoading, refresh } = useTransactionHistory();
+  const { transactions, isLoading } = useTransactionHistory();
   const environment = useEnvironment();
   const openTransactionWindow = useBridgeStore((state) => state.openTransactionWindow);
 

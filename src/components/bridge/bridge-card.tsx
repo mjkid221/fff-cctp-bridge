@@ -11,24 +11,16 @@ import { FeeSummaryCard } from "./fee-summary-card";
 import {
   useAddNotification,
   useUpdateNotification,
-  useNotifications,
 } from "~/lib/notifications";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-  ChevronRight,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowRight, Loader2, AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
   useBridgeInit,
   useBridge,
   useBridgeEstimate,
-  useRetryBridge,
   useWalletBalance,
   useFromChain,
   useToChain,
@@ -58,19 +50,15 @@ export function BridgeCard() {
   const { isInitialized } = useBridgeInit();
 
   // Auto-switch network when chain changes
-  const { isSwitching, switchError } = useNetworkAutoSwitch();
+  const { switchError } = useNetworkAutoSwitch();
 
   // Notification system
   const addNotification = useAddNotification();
   const updateNotification = useUpdateNotification();
-  const notifications = useNotifications();
 
   // Transaction update from store
   const updateTransactionInStore = useBridgeStore(
     (state) => state.updateTransaction,
-  );
-  const setCurrentTransaction = useBridgeStore(
-    (state) => state.setCurrentTransaction,
   );
 
   // Chain selection from store
@@ -107,10 +95,6 @@ export function BridgeCard() {
   const [isAddressValid, setIsAddressValid] = useState(false);
   const [showFeeDetails, setShowFeeDetails] = useState(false);
 
-  // Window state from store (for fee details)
-  const activeWindow = useActiveWindow();
-  const setActiveWindow = useSetActiveWindow();
-
   // Current transaction from store
   const currentTransaction = useCurrentTransaction();
 
@@ -120,7 +104,6 @@ export function BridgeCard() {
     isLoading: isBridging,
     error: bridgeError,
   } = useBridge();
-  const { retryBridge, isRetrying } = useRetryBridge();
   const { estimateBridge, estimate, isEstimating } = useBridgeEstimate();
   const { balance } = useWalletBalance(fromChain);
 
@@ -295,7 +278,6 @@ export function BridgeCard() {
   // Refs for bridge card and animated beam container
   const bridgeCardRef = useRef<HTMLDivElement>(null);
   const beamContainerRef = useRef<HTMLDivElement>(null);
-  const beamFromRef = useRef<HTMLButtonElement>(null);
 
   return (
     <>
@@ -543,7 +525,6 @@ export function BridgeCard() {
                   </div>
                   {/* View Details button - Desktop only */}
                   <button
-                    ref={beamFromRef}
                     onClick={() => setShowFeeDetails(!showFeeDetails)}
                     className="border-border/50 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground hidden w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors lg:flex"
                   >
