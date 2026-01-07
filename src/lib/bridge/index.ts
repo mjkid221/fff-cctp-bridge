@@ -11,6 +11,9 @@ export {
 } from "./service";
 export type { BridgeServiceConfig } from "./service";
 
+// Event manager
+export { BridgeEventManager } from "./event-manager";
+
 // Adapter factory
 export {
   getAdapterFactory,
@@ -25,6 +28,16 @@ export { getBalanceService, BalanceService } from "./balance/service";
 // Storage
 export { BridgeStorage } from "./storage";
 
+// Window utilities
+export {
+  constrainToViewport,
+  isWithinViewport,
+  validateOrResetPosition,
+  getWindowDimensions,
+  DEFAULT_WINDOW_POSITIONS,
+} from "./window-utils";
+export type { WindowDimensions, WindowPosition, WindowType } from "./window-utils";
+
 // Hooks
 export {
   useBridgeInit,
@@ -34,8 +47,10 @@ export {
   useRouteSupport,
   useWalletBalance,
   useTransactionHistory,
+  useNetworkAutoSwitch,
   useWalletForNetwork,
   useWalletSelection,
+  useWalletsByType,
 } from "./hooks";
 export type { WalletOption } from "./hooks";
 
@@ -47,6 +62,14 @@ export {
   validateAddressForNetwork,
   getAddressFormatDescription,
 } from "./address-validation";
+
+// Error parsing
+export {
+  parseTransactionError,
+  parseStepError,
+  isUserRejectionError,
+} from "./error-parser";
+export type { ParsedError } from "./error-parser";
 
 // Store
 export { useBridgeStore } from "./store";
@@ -66,7 +89,19 @@ export {
   useError,
   useActiveWindow,
   useSetActiveWindow,
+  useWindowPositions,
+  useSetWindowPosition,
+  useHasHydrated,
+  // Multi-window transaction support
+  useOpenTransactionWindows,
+  useOpenTransactionWindow,
+  useCloseTransactionWindow,
+  useFocusTransactionWindow,
+  useUpdateTransactionWindowPosition,
+  useUpdateTransactionInWindow,
+  useMinimizeTransactionWindow,
 } from "./store";
+export type { TransactionWindow } from "./store";
 
 // Types
 export type {

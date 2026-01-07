@@ -1,26 +1,50 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   useDynamicContext,
   useDynamicModals,
   useUserWallets,
   useSwitchWallet,
 } from "@dynamic-labs/sdk-react-core";
+import { isEthereumWallet } from "@dynamic-labs/ethereum";
+import { isSolanaWallet } from "@dynamic-labs/solana";
+import { isSuiWallet } from "@dynamic-labs/sui";
 import { getBridgeService } from "./service";
 import { useBridgeStore } from "./store";
 import type { BridgeParams, BridgeEstimate, BridgeTransaction } from "./types";
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
+
+/**
+ * Custom hook that provides wallets filtered by type with proper type guards
+ * This avoids the need for `any` types and eslint-disable comments
+ */
+export function useWalletsByType() {
+  const rawWallets = useUserWallets();
+
+  const walletsByType = useMemo(() => {
+    return {
+      ethereum: rawWallets.filter(isEthereumWallet),
+      solana: rawWallets.filter(isSolanaWallet),
+      sui: rawWallets.filter(isSuiWallet),
+      all: rawWallets,
+    };
+  }, [rawWallets]);
+
+  return walletsByType;
+}
+
 /**
  * Hook to initialize bridge service with wallet
  */
 export function useBridgeInit() {
   const { primaryWallet } = useDynamicContext();
-  const userWallets = useUserWallets();
+  const { all: allWallets } = useWalletsByType();
   const setUserAddress = useBridgeStore((state) => state.setUserAddress);
   const loadTransactions = useBridgeStore((state) => state.loadTransactions);
   const [isInitialized, setIsInitialized] = useState(false);
+  const hasAutoLoadedRef = useRef(false);
 
   useEffect(() => {
     const initBridge = async () => {
@@ -28,18 +52,60 @@ export function useBridgeInit() {
         const service = getBridgeService();
 
         // Pass the primary wallet and all connected wallets to the service
-        await service.initialize(primaryWallet, userWallets);
+        await service.initialize(primaryWallet, allWallets);
         setUserAddress(primaryWallet.address);
         await loadTransactions();
         setIsInitialized(true);
       } else {
         setUserAddress(null);
         setIsInitialized(false);
+        hasAutoLoadedRef.current = false;
       }
     };
 
     void initBridge();
-  }, [primaryWallet, userWallets, setUserAddress, loadTransactions]);
+  }, [primaryWallet, allWallets, setUserAddress, loadTransactions]);
+
+  // Auto-load in-progress transaction after page refresh (runs only once)
+  useEffect(() => {
+    if (!isInitialized || hasAutoLoadedRef.current) return;
+
+    const autoLoadInProgressTx = async () => {
+      const service = getBridgeService();
+      const transactions = await service.getTransactions();
+
+      // Find the most recent in-progress transaction
+      const inProgressTx = transactions
+        .filter(
+          (tx) =>
+            tx.status === "bridging" ||
+            tx.status === "pending" ||
+            tx.status === "approving" ||
+            tx.status === "approved" ||
+            tx.status === "confirming",
+        )
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+      if (inProgressTx) {
+        // Mark as auto-loaded to prevent running again
+        hasAutoLoadedRef.current = true;
+
+        const setCurrentTransaction = useBridgeStore.getState().setCurrentTransaction;
+        const setActiveWindow = useBridgeStore.getState().setActiveWindow;
+
+        // Set as current transaction and show progress window
+        setCurrentTransaction(inProgressTx);
+        setActiveWindow("bridge-progress");
+
+        // No polling needed - event manager handles real-time updates
+      } else {
+        // No in-progress transaction found, mark as checked
+        hasAutoLoadedRef.current = true;
+      }
+    };
+
+    void autoLoadInProgressTx();
+  }, [isInitialized]);
 
   return { isInitialized, address: primaryWallet?.address };
 }
@@ -81,7 +147,6 @@ export function useBridge() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addTransaction = useBridgeStore((state) => state.addTransaction);
-  const updateTransaction = useBridgeStore((state) => state.updateTransaction);
   const setCurrentTransaction = useBridgeStore(
     (state) => state.setCurrentTransaction,
   );
@@ -99,28 +164,7 @@ export function useBridge() {
         addTransaction(transaction);
         setCurrentTransaction(transaction);
 
-        // Poll for updates while transaction is in progress
-        const pollInterval = setInterval(() => {
-          void (async () => {
-            const updated = await service.getTransaction(transaction.id);
-            if (updated) {
-              updateTransaction(transaction.id, updated);
-              setCurrentTransaction(updated);
-
-              // Stop polling when transaction is complete or failed
-              if (
-                updated.status === "completed" ||
-                updated.status === "failed" ||
-                updated.status === "cancelled"
-              ) {
-                clearInterval(pollInterval);
-              }
-            }
-          })();
-        }, 2000); // Poll every 2 seconds
-
-        // Cleanup interval after 15 minutes (max attestation time)
-        setTimeout(() => clearInterval(pollInterval), 15 * 60 * 1000);
+        // No polling needed - event manager handles real-time updates
 
         return transaction;
       } catch (err) {
@@ -132,7 +176,7 @@ export function useBridge() {
         setIsLoading(false);
       }
     },
-    [addTransaction, setCurrentTransaction, updateTransaction],
+    [addTransaction, setCurrentTransaction],
   );
 
   return { executeBridge, isLoading, error };
@@ -269,6 +313,94 @@ export function useTransactionHistory() {
 }
 
 /**
+ * Hook to automatically switch wallet network when chain selection changes
+ * This ensures the wallet's active network matches the selected bridge chain
+ */
+export function useNetworkAutoSwitch() {
+  const fromChain = useBridgeStore((state) => state.fromChain);
+  const { primaryWallet } = useDynamicContext();
+  const { solana: solanaWallets } = useWalletsByType();
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const switchNetworkIfNeeded = async () => {
+      if (!fromChain || !primaryWallet) return;
+
+      const network = NETWORK_CONFIGS[fromChain];
+      if (!network) return;
+
+      // Only auto-switch for Solana (EVM wallets handle network switching themselves)
+      if (network.type !== "solana") return;
+
+      // Get the first available Solana wallet
+      const solanaWallet = solanaWallets[0];
+
+      if (!solanaWallet) {
+        console.warn("No Solana wallet connected for network switch");
+        return;
+      }
+
+      try {
+        setIsSwitching(true);
+        setSwitchError(null);
+
+        // Get current network - solanaWallet is properly typed as SolanaWallet
+        const currentConnection = await solanaWallet.getConnection();
+        const currentRpc: string = currentConnection.rpcEndpoint;
+
+        console.log("[Network Switch] Current RPC:", currentRpc);
+        console.log("[Network Switch] Target chain:", fromChain);
+
+        // Check if we need to switch
+        const isMainnet = currentRpc.includes("mainnet");
+        const isDevnet = currentRpc.includes("devnet");
+
+        const needsSwitch =
+          (network.environment === "mainnet" && !isMainnet) ||
+          (network.environment === "testnet" && !isDevnet);
+
+        if (!needsSwitch) {
+          console.log("[Network Switch] Already on correct network");
+          return;
+        }
+
+        console.log(
+          `[Network Switch] Switching to ${fromChain} (environment: ${network.environment})`,
+        );
+
+        // Switch network using Dynamic's API
+        // SolanaWallet has switchNetwork method that takes chainId as string/number
+        if (typeof solanaWallet.switchNetwork === "function") {
+          await solanaWallet.switchNetwork(
+            network.dynamicChainId || fromChain,
+          );
+          console.log("[Network Switch] Successfully switched to:", fromChain);
+
+          // Small delay to let network switch propagate
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } else {
+          console.warn(
+            "[Network Switch] Wallet does not support switchNetwork",
+          );
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[Network Switch] Failed to switch network:", message);
+        setSwitchError(message);
+      } finally {
+        setIsSwitching(false);
+      }
+    };
+
+    void switchNetworkIfNeeded();
+  }, [fromChain, primaryWallet, solanaWallets]);
+
+  return { isSwitching, switchError };
+}
+
+/**
  * Hook for managing wallet connection for specific network types
  * Note: Dynamic SDK automatically handles multi-wallet support when users
  * connect additional wallets through the modal
@@ -278,10 +410,10 @@ export function useWalletForNetwork(
 ) {
   const { setSelectedTabIndex } = useDynamicContext();
   const { setShowLinkNewWalletModal } = useDynamicModals();
-  const userWallets = useUserWallets();
-  const [compatibleWallet, setCompatibleWallet] = useState<
-    (typeof userWallets)[number] | null
-  >(null);
+  const walletsByType = useWalletsByType();
+  const [compatibleWallet, setCompatibleWallet] = useState<ReturnType<
+    typeof useUserWallets
+  >[number] | null>(null);
 
   useEffect(() => {
     if (!networkType) {
@@ -289,13 +421,15 @@ export function useWalletForNetwork(
       return;
     }
 
-    // Check all connected wallets for compatibility
-    const compatible = userWallets.find((wallet) =>
-      checkWalletCompatibility(wallet, networkType),
-    );
-
-    setCompatibleWallet(compatible ?? null);
-  }, [userWallets, networkType]);
+    // Get the first compatible wallet for the network type
+    if (networkType === "evm") {
+      setCompatibleWallet(walletsByType.ethereum[0] ?? null);
+    } else if (networkType === "solana") {
+      setCompatibleWallet(walletsByType.solana[0] ?? null);
+    } else if (networkType === "sui") {
+      setCompatibleWallet(walletsByType.sui[0] ?? null);
+    }
+  }, [walletsByType, networkType]);
 
   const promptWalletConnection = useCallback(
     (chainName?: string) => {
@@ -335,47 +469,6 @@ export function useWalletForNetwork(
   };
 }
 
-/**
- * Check if wallet is compatible with network type using Dynamic's chain property
- */
-function checkWalletCompatibility(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  wallet: any,
-  networkType: "evm" | "solana" | "sui",
-): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  if (!wallet?.chain) return false;
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  const chainName = String(wallet.chain).toLowerCase();
-
-  switch (networkType) {
-    case "evm":
-      // Check if the wallet's chain is an EVM chain
-      return (
-        chainName.includes("eth") ||
-        chainName.includes("arbitrum") ||
-        chainName.includes("base") ||
-        chainName.includes("optimism") ||
-        chainName.includes("polygon") ||
-        chainName.includes("avalanche") ||
-        chainName.includes("bnb") ||
-        chainName.includes("evm")
-      );
-
-    case "solana":
-      // Check if the wallet's chain is Solana
-      return chainName.includes("solana") || chainName.includes("sol");
-
-    case "sui":
-      // Check if the wallet's chain is SUI
-      return chainName.includes("sui");
-
-    default:
-      return false;
-  }
-}
-
 export interface WalletOption {
   id: string;
   address: string;
@@ -403,7 +496,7 @@ export function useWalletSelection(
   hasCompatibleSourceWallet: boolean;
   hasCompatibleDestWallet: boolean;
 } {
-  const userWallets = useUserWallets();
+  const walletsByType = useWalletsByType();
   const { primaryWallet } = useDynamicContext();
   const switchWallet = useSwitchWallet();
   const [selectedSourceWalletId, setSelectedSourceWalletId] = useState<
@@ -421,28 +514,29 @@ export function useWalletSelection(
     ? (NETWORK_CONFIGS[toChain]?.type ?? null)
     : null;
 
-  // Filter compatible wallets for each chain
-  const sourceWallets = userWallets.filter((wallet) =>
-    fromNetworkType ? checkWalletCompatibility(wallet, fromNetworkType) : true,
-  );
+  // Get compatible wallets for each network type using proper type guards
+  const sourceWallets = useMemo(() => {
+    if (!fromNetworkType) return walletsByType.all;
+    if (fromNetworkType === "evm") return walletsByType.ethereum;
+    if (fromNetworkType === "solana") return walletsByType.solana;
+    if (fromNetworkType === "sui") return walletsByType.sui;
+    return [];
+  }, [fromNetworkType, walletsByType]);
 
-  const destWallets = userWallets.filter((wallet) => {
-    // Only filter by network compatibility, allow same wallet if it supports destination network
-    return toNetworkType
-      ? checkWalletCompatibility(wallet, toNetworkType)
-      : true;
-  });
+  const destWallets = useMemo(() => {
+    if (!toNetworkType) return walletsByType.all;
+    if (toNetworkType === "evm") return walletsByType.ethereum;
+    if (toNetworkType === "solana") return walletsByType.solana;
+    if (toNetworkType === "sui") return walletsByType.sui;
+    return [];
+  }, [toNetworkType, walletsByType]);
 
   // Auto-select primary wallet as source if compatible
   useEffect(() => {
-    if (
-      primaryWallet &&
-      fromNetworkType &&
-      checkWalletCompatibility(primaryWallet, fromNetworkType)
-    ) {
+    if (primaryWallet && sourceWallets.some((w) => w.id === primaryWallet.id)) {
       setSelectedSourceWalletId(primaryWallet.id);
     }
-  }, [primaryWallet, fromNetworkType]);
+  }, [primaryWallet, sourceWallets]);
 
   // Auto-select first compatible wallet as destination
   useEffect(() => {

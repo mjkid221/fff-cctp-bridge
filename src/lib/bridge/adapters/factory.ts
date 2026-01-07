@@ -3,8 +3,8 @@
  * This design allows easy addition of new chains without modifying core service logic
  */
 
-import { createAdapterFromProvider as createEvmAdapter } from "@circle-fin/adapter-viem-v2";
-import { createAdapterFromProvider as createSolanaAdapter } from "@circle-fin/adapter-solana";
+import { createViemAdapterFromProvider as createEvmAdapter } from "@circle-fin/adapter-viem-v2";
+import { createSolanaAdapterFromProvider as createSolanaAdapter } from "@circle-fin/adapter-solana";
 import { isEthereumWallet } from "@dynamic-labs/ethereum";
 import { isSolanaWallet } from "@dynamic-labs/solana";
 import type {
@@ -57,7 +57,7 @@ export class EVMAdapterCreator implements IAdapterCreator {
 
     // Create EVM adapter using Circle's factory
     // Dynamic's wallet client is EIP-1193 compatible but types don't match exactly
-    // Using type assertion for compatibility
+    // :P
     return await createEvmAdapter({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
       provider: providerResult as any,
@@ -84,6 +84,8 @@ export class SolanaAdapterCreator implements IAdapterCreator {
     }
     // Create wrapper for Solana Wallet Provider class (for Dynamic)
     const solanaProvider = new DynamicSolanaWalletAdapter(wallet);
+
+    console.log("WALLET ----- : ", await wallet.getConnection());
 
     const connection = new Connection(
       (await wallet.getConnection()).rpcEndpoint,

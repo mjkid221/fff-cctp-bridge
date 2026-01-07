@@ -1,7 +1,7 @@
 import { BridgeCard } from "~/components/bridge/bridge-card";
+import { TransactionWindows } from "~/components/bridge/transaction-windows";
 import { AnimatedBackground } from "~/components/bridge/animated-background";
 import { BridgeHeader } from "~/components/bridge/header";
-import { Footer } from "~/components/bridge/footer";
 import { HydrateClient } from "~/trpc/server";
 
 export default function Home() {
@@ -13,12 +13,13 @@ export default function Home() {
         <div className="relative z-10 flex min-h-screen flex-col">
           <BridgeHeader />
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-12 px-4 py-12">
+          <div className="flex flex-1 flex-col items-center justify-center gap-12 py-12">
             <BridgeCard />
           </div>
-
-          <Footer />
         </div>
+
+        {/* Multi-window transaction panels */}
+        <TransactionWindows />
       </main>
     </HydrateClient>
   );

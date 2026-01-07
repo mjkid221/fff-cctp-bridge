@@ -26,6 +26,7 @@ export interface NetworkConfig {
   icon: string;
   color: string;
   explorerUrl: string;
+  dynamicChainId?: string; // Dynamic's network identifier for programmatic switching
   nativeCurrency: {
     name: string;
     symbol: string;
@@ -86,6 +87,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     displayName: "Solana",
     type: "solana",
     environment: "mainnet",
+    dynamicChainId: "101",
     icon: "◎",
     color: "from-violet-500/20 to-fuchsia-500/20",
     explorerUrl: "https://solscan.io",
@@ -148,6 +150,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     displayName: "Solana (Devnet)",
     type: "solana",
     environment: "testnet",
+    dynamicChainId: "103",
     icon: "◎",
     color: "from-violet-500/20 to-fuchsia-500/20",
     explorerUrl: "https://solscan.io",

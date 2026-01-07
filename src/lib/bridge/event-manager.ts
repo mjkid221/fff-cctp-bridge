@@ -1,0 +1,169 @@
+/**
+ * Bridge Event Manager
+ *
+ * Subscribes to Bridge Kit events and provides real-time step updates
+ * to storage and UI as bridge operations execute.
+ */
+
+import type { BridgeKit } from "@circle-fin/bridge-kit";
+import type { BridgeTransaction, BridgeStep } from "./types";
+import type { BridgeStorage } from "./storage";
+
+/**
+ * Event payload from Bridge Kit
+ */
+interface BridgeEvent {
+  method: string;
+  values?: {
+    txHash?: string;
+    data?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Centralized manager for Bridge Kit event subscriptions
+ * Handles real-time step updates as bridge operations execute
+ */
+export class BridgeEventManager {
+  private kit: BridgeKit;
+  private storage: typeof BridgeStorage;
+  private trackedTransactions: Map<string, (tx: BridgeTransaction) => void>;
+  private eventHandlers: Array<() => void>; // Cleanup functions
+
+  constructor(kit: BridgeKit, storage: typeof BridgeStorage) {
+    this.kit = kit;
+    this.storage = storage;
+    this.trackedTransactions = new Map();
+    this.eventHandlers = [];
+
+    this.setupEventListeners();
+  }
+
+  /**
+   * Subscribe to all Bridge Kit events using wildcard listener
+   */
+  private setupEventListeners(): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handler = (event: any) => {
+      console.log(`[Bridge Event] ${event.method}:`, event.values);
+
+      // Update all tracked transactions based on event
+      for (const [txId, callback] of this.trackedTransactions.entries()) {
+        void this.handleStepUpdate(txId, event as BridgeEvent, callback);
+      }
+    };
+
+    this.kit.on("*", handler);
+
+    // Store cleanup function
+    this.eventHandlers.push(() => this.kit.off("*", handler));
+  }
+
+  /**
+   * Handle a step update from a Bridge Kit event
+   */
+  private async handleStepUpdate(
+    txId: string,
+    event: BridgeEvent,
+    callback: (tx: BridgeTransaction) => void,
+  ): Promise<void> {
+    // Map event method to step ID
+    const stepMapping: Record<string, string> = {
+      approve: "approve",
+      burn: "burn",
+      fetchAttestation: "attestation",
+      mint: "mint",
+    };
+
+    const stepId = stepMapping[event.method];
+    if (!stepId) return;
+
+    // Get transaction from storage
+    const tx = await this.storage.getTransaction(txId);
+    if (!tx) return;
+
+    // Find and update the step
+    const step = tx.steps.find((s) => s.id === stepId);
+    if (!step) return;
+
+    // Update step based on event
+    step.status = "completed";
+    step.timestamp = Date.now();
+
+    // Extract transaction hash if available
+    if (event.values?.txHash) {
+      step.txHash = String(event.values.txHash);
+    }
+
+    // Handle special case: attestation completes when fetchAttestation fires
+    if (stepId === "attestation" && event.values?.data) {
+      tx.attestationHash = String(event.values.data); // Circle's attestation
+    }
+
+    // Step progression: When a step completes, mark the NEXT step as in_progress
+    // Bridge Kit only emits events on step COMPLETION, not when steps START
+    // So we need to advance the next step to in_progress here
+    const stepOrder = ["approve", "burn", "attestation", "mint"];
+    const currentIndex = stepOrder.indexOf(stepId);
+    if (currentIndex >= 0 && currentIndex < stepOrder.length - 1) {
+      const nextStepId = stepOrder[currentIndex + 1];
+      const nextStep = tx.steps.find((s) => s.id === nextStepId);
+
+      // Only advance if next step is pending (not already in_progress/completed)
+      if (nextStep?.status === "pending") {
+        nextStep.status = "in_progress";
+        nextStep.timestamp = Date.now();
+        console.log(
+          `[Event Manager] ${stepId} completed, starting ${nextStepId} for tx ${txId.substring(0, 8)}...`,
+        );
+      }
+    }
+
+    // Save to storage
+    tx.updatedAt = Date.now();
+    await this.storage.saveTransaction(tx);
+
+    console.log(`[Event Manager] Updated step ${stepId} for tx ${txId.substring(0, 8)}...`);
+
+    // Notify callback for UI update
+    callback(tx);
+  }
+
+  /**
+   * Start tracking a transaction's events
+   *
+   * @param txId - Transaction ID to track
+   * @param callback - Called when transaction is updated by events
+   */
+  trackTransaction(
+    txId: string,
+    callback: (tx: BridgeTransaction) => void,
+  ): void {
+    this.trackedTransactions.set(txId, callback);
+    console.log(`[Event Manager] Now tracking transaction ${txId.substring(0, 8)}...`);
+  }
+
+  /**
+   * Stop tracking a transaction
+   *
+   * @param txId - Transaction ID to stop tracking
+   */
+  untrackTransaction(txId: string): void {
+    this.trackedTransactions.delete(txId);
+    console.log(`[Event Manager] Stopped tracking transaction ${txId.substring(0, 8)}...`);
+  }
+
+  /**
+   * Clean up all event listeners
+   * Should be called when service is reset or disposed
+   */
+  dispose(): void {
+    console.log("[Event Manager] Disposing all event listeners");
+
+    // Clean up all event listeners
+    this.eventHandlers.forEach((cleanup) => cleanup());
+    this.eventHandlers = [];
+    this.trackedTransactions.clear();
+  }
+}

@@ -17,9 +17,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@circle-fin/adapter-solana": "^1.1.2",
-    "@circle-fin/adapter-viem-v2": "^1.1.1",
-    "@circle-fin/bridge-kit": "^1.1.2",
+    "@circle-fin/adapter-solana": "^1.2.0",
+    "@circle-fin/adapter-viem-v2": "^1.2.0",
+    "@circle-fin/bridge-kit": "^1.2.0",
     "@dynamic-labs/ethereum": "^4.47.0",
     "@dynamic-labs/iconic": "^4.47.3",
     "@dynamic-labs/sdk-react-core": "^4.47.0",
@@ -41,6 +41,8 @@
     "@web3icons/react": "^4.1.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "framer-motion": "^12.24.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.554.0",
     "motion": "^12.23.24",

@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useEnvironment, useSetEnvironment } from "~/lib/bridge";
 import { Circle } from "lucide-react";
+import { cn } from "~/lib/utils";
 
 export function NetworkToggle() {
   const environment = useEnvironment();
@@ -12,13 +13,20 @@ export function NetworkToggle() {
 
   return (
     <motion.button
-      whileHover={{ backgroundColor: "rgba(0,0,0,0.05)" }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       onClick={() => setEnvironment(isMainnet ? "testnet" : "mainnet")}
-      className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted/50"
+      className={cn(
+        "relative flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all",
+        "hover:bg-muted/50"
+      )}
+      aria-label={`Switch to ${isMainnet ? "testnet" : "mainnet"}`}
     >
       <Circle
-        className={`size-2 ${isMainnet ? "fill-blue-500 text-blue-500" : "fill-amber-500 text-amber-500"}`}
+        className={cn(
+          "size-2.5 transition-colors",
+          isMainnet ? "fill-blue-500 text-blue-500" : "fill-amber-500 text-amber-500"
+        )}
       />
       <span className="text-foreground">
         {isMainnet ? "Mainnet" : "Testnet"}

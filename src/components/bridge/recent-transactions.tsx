@@ -7,16 +7,14 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  RefreshCw,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
   useTransactionHistory,
-  useRetryBridge,
   NETWORK_CONFIGS,
   useEnvironment,
+  useBridgeStore,
 } from "~/lib/bridge";
-import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 
 function formatTimestamp(timestamp: number): string {
@@ -34,15 +32,11 @@ function formatTimestamp(timestamp: number): string {
 
 export function RecentTransactions() {
   const { transactions, isLoading, refresh } = useTransactionHistory();
-  const { retryBridge, isRetrying } = useRetryBridge();
   const environment = useEnvironment();
+  const openTransactionWindow = useBridgeStore((state) => state.openTransactionWindow);
 
-  const handleRetry = async (txId: string) => {
-    try {
-      await retryBridge(txId);
-    } catch (error) {
-      console.error("Retry failed:", error);
-    }
+  const handleOpenTransaction = (transaction: typeof transactions[0]) => {
+    openTransactionWindow(transaction);
   };
 
   // Filter transactions by current environment
@@ -99,24 +93,13 @@ export function RecentTransactions() {
       transition={{ duration: 0.5, delay: 0.5 }}
       className="w-full max-w-4xl"
     >
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-foreground text-2xl font-bold">
-            Recent Transactions
-          </h3>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Your latest {environment} bridge activity
-          </p>
-        </div>
-        <Button
-          onClick={() => void refresh()}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <RefreshCw className="size-4" />
-          Refresh
-        </Button>
+      <div className="mb-6">
+        <h3 className="text-foreground text-2xl font-bold">
+          Recent Transactions
+        </h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Your latest {environment} bridge activity
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -134,8 +117,9 @@ export function RecentTransactions() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
               whileHover={{ scale: 1.01, x: 4 }}
+              onClick={() => handleOpenTransaction(tx)}
               className={cn(
-                "group border-border/50 bg-card/50 relative overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-all",
+                "group border-border/50 bg-card/50 relative cursor-pointer overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-all",
                 "hover:border-border hover:bg-card/80 hover:shadow-lg",
               )}
             >
@@ -176,36 +160,21 @@ export function RecentTransactions() {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Status badge */}
                 <div className="flex items-center gap-2">
-                  {isFailed && (
-                    <Button
-                      onClick={() => void handleRetry(tx.id)}
-                      disabled={isRetrying}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <RefreshCw className="size-4" />
-                      Retry
-                    </Button>
-                  )}
-                  {tx.sourceTxHash && (
-                    <motion.a
-                      href={`${fromNetwork?.explorerUrl}/tx/${tx.sourceTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
-                        "hover:bg-muted/50 hover:text-foreground",
-                      )}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <span className="hidden sm:inline">View</span>
-                      <ExternalLink className="size-4" />
-                    </motion.a>
-                  )}
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[10px] font-semibold",
+                      isCompleted && "bg-green-500/10 text-green-500",
+                      isPending && "bg-blue-500/10 text-blue-500",
+                      isFailed && "bg-red-500/10 text-red-500",
+                    )}
+                  >
+                    {isCompleted && "Completed"}
+                    {isPending && "In Progress"}
+                    {isFailed && "Failed"}
+                  </span>
+                  <ExternalLink className="text-muted-foreground size-4 opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
               </div>
 

@@ -53,6 +53,9 @@ export interface BridgeTransaction {
     bridge: string;
     total: string;
   };
+  notificationId?: string; // Link to notification for this transaction
+  bridgeResult?: unknown; // Store Bridge Kit result for retry (as unknown since it's from external lib)
+  recipientAddress?: string; // Store recipient address for retry
 }
 
 /**

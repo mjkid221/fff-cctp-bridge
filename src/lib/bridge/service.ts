@@ -29,6 +29,8 @@ import { getAdapterFactory, type AdapterFactory } from "./adapters/factory";
 import { getBalanceService, type BalanceService } from "./balance/service";
 import type { TokenBalance } from "./balance/service";
 import { getAttestationTime } from "./attestation-times";
+import { BridgeEventManager } from "./event-manager";
+import { useBridgeStore } from "./store";
 
 /**
  * Bridge service configuration
@@ -64,6 +66,7 @@ export class CCTPBridgeService implements IBridgeService {
   private readonly adapterFactory: AdapterFactory;
   private readonly balanceService: BalanceService;
   private readonly storage: typeof BridgeStorage;
+  private readonly eventManager: BridgeEventManager;
 
   private userAddress: string | null = null;
   private wallet: Wallet<WalletConnectorCore.WalletConnector> | null = null;
@@ -74,6 +77,7 @@ export class CCTPBridgeService implements IBridgeService {
     this.adapterFactory = config.adapterFactory ?? getAdapterFactory();
     this.balanceService = config.balanceService ?? getBalanceService();
     this.storage = config.storage ?? BridgeStorage;
+    this.eventManager = new BridgeEventManager(this.kit, this.storage);
   }
 
   /**
@@ -87,7 +91,8 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Address is required");
     }
 
-    this.userAddress = wallet?.address;
+    // Normalize userAddress to lowercase for consistent storage queries
+    this.userAddress = wallet?.address?.toLowerCase() ?? null;
     this.wallet = wallet ?? null;
     this.wallets = allWallets ?? (wallet ? [wallet] : []);
 
@@ -266,23 +271,60 @@ export class CCTPBridgeService implements IBridgeService {
     // Save to storage
     await this.storage.saveTransaction(transaction);
 
+    // Set as current transaction BEFORE starting bridge
+    // This allows event callbacks to update it during execution
+    useBridgeStore.getState().setCurrentTransaction(transaction);
+
+    // Start tracking events BEFORE bridge executes
+    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
+      // Use queueMicrotask to ensure React processes the state update
+      // Without this, updates may be batched and not render until execution completes
+      queueMicrotask(() => {
+        const state = useBridgeStore.getState();
+
+        // Update the transactions array
+        state.updateTransaction(transaction.id, updatedTx);
+
+        // Update currentTransaction for UI reactivity
+        state.setCurrentTransaction(updatedTx);
+
+        // Update the transaction in any open windows (multi-window support)
+        state.updateTransactionInWindow(transaction.id, updatedTx);
+
+        console.log(
+          `[Bridge Service] Updated transaction ${transaction.id.substring(0, 8)}... in store and windows`,
+        );
+      });
+    });
+
     try {
       // Execute the bridge operation
       await this.executeBridgeOperation(context, transaction);
     } catch (error) {
       // Handle bridge execution errors
       await this.handleBridgeError(transaction, error);
+    } finally {
+      // Stop tracking when done
+      this.eventManager.untrackTransaction(transaction.id);
     }
 
     // Save final state
     transaction.updatedAt = Date.now();
     await this.storage.saveTransaction(transaction);
 
+    // Update the store with the final transaction state
+    // This is needed because processBridgeResult updates the transaction after
+    // the last EventManager callback fires, so the store may not have the final state
+    const state = useBridgeStore.getState();
+    state.updateTransaction(transaction.id, transaction);
+    state.setCurrentTransaction(transaction);
+    state.updateTransactionInWindow(transaction.id, transaction);
+
     return transaction;
   }
 
   /**
-   * Retry a failed transaction
+   * Retry a failed transaction using Bridge Kit's retry API
    */
   async retry(transactionId: string): Promise<BridgeTransaction> {
     if (!this.userAddress) {
@@ -304,14 +346,124 @@ export class CCTPBridgeService implements IBridgeService {
       );
     }
 
-    // Create new transaction with same parameters
-    return this.bridge({
-      fromChain: originalTx.fromChain,
-      toChain: originalTx.toChain,
-      amount: originalTx.amount,
-      token: originalTx.token,
-      recipientAddress: originalTx.destinationTxHash?.split(":")[1], // Extract if available
+    if (!originalTx.bridgeResult) {
+      throw new Error(
+        "Cannot retry: original bridge result not found. Please create a new transaction instead.",
+      );
+    }
+
+    // Get adapters for retry
+    const fromAdapter = await this.getAdapterForChain(originalTx.fromChain);
+    const toAdapter = await this.getAdapterForChain(originalTx.toChain);
+
+    // Get completed steps from the original bridgeResult
+    const bridgeResult = originalTx.bridgeResult as BridgeResult;
+
+    // Reuse the existing transaction - update in place instead of creating new
+    // This keeps the same ID, so windows and event tracking work automatically
+    const transaction = originalTx;
+
+    // Reset transaction state for retry
+    transaction.status = "pending";
+    transaction.error = undefined;
+    transaction.updatedAt = Date.now();
+
+    // Reset failed/pending steps, keep completed steps
+    transaction.steps = transaction.steps.map((step) => {
+      // Keep completed steps as-is
+      if (step.status === "completed") {
+        return {
+          ...step,
+          error: undefined, // Clear any stale error
+        };
+      }
+
+      // FALLBACK: Check bridgeResult.steps for SDK's knowledge
+      // This handles edge cases where our steps weren't updated
+      const sdkStep = bridgeResult.steps.find(
+        (s) => s.name.toLowerCase() === step.name.toLowerCase(),
+      );
+
+      if (sdkStep && (sdkStep.state === "success" || sdkStep.state === "noop")) {
+        return {
+          ...step,
+          status: "completed" as const,
+          txHash: "txHash" in sdkStep ? String(sdkStep.txHash) : step.txHash,
+          error: undefined,
+        };
+      }
+
+      // Reset non-completed steps for retry
+      return {
+        ...step,
+        status: "pending" as const,
+        txHash: undefined,
+        error: undefined,
+        timestamp: Date.now(),
+      };
     });
+
+    // Save updated transaction (same ID)
+    await this.storage.saveTransaction(transaction);
+
+    // Set as current transaction BEFORE starting retry
+    useBridgeStore.getState().setCurrentTransaction(transaction);
+
+    // Start tracking events BEFORE retry executes
+    // Same transaction ID means existing window will receive updates
+    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
+      queueMicrotask(() => {
+        const state = useBridgeStore.getState();
+        state.updateTransaction(transaction.id, updatedTx);
+        state.setCurrentTransaction(updatedTx);
+        state.updateTransactionInWindow(transaction.id, updatedTx);
+
+        console.log(
+          `[Bridge Service] Updated transaction ${transaction.id.substring(0, 8)}... in store and windows (retry)`,
+        );
+      });
+    });
+
+    try {
+      // Update status to bridging
+      transaction.status = "bridging";
+      // Find the first pending step (the one that needs retry) and set it to in_progress
+      const stepToRetry = transaction.steps.find((s) => s.status === "pending");
+      if (stepToRetry) {
+        stepToRetry.status = "in_progress";
+      }
+      await this.storage.saveTransaction(transaction);
+
+      // Use Bridge Kit's retry API with the original bridgeResult
+      const retryResult = await this.kit.retry(bridgeResult, {
+        from: fromAdapter,
+        to: toAdapter,
+      });
+
+      // Store the retry result
+      transaction.bridgeResult = retryResult;
+
+      // Process the result
+      await this.processBridgeResult(transaction, retryResult);
+    } catch (error) {
+      // Handle retry errors
+      await this.handleBridgeError(transaction, error);
+    } finally {
+      // Stop tracking when done
+      this.eventManager.untrackTransaction(transaction.id);
+    }
+
+    // Save final state
+    transaction.updatedAt = Date.now();
+    await this.storage.saveTransaction(transaction);
+
+    // Update the store with the final transaction state
+    const state = useBridgeStore.getState();
+    state.updateTransaction(transaction.id, transaction);
+    state.setCurrentTransaction(transaction);
+    state.updateTransactionInWindow(transaction.id, transaction);
+
+    return transaction;
   }
 
   /**
@@ -354,6 +506,7 @@ export class CCTPBridgeService implements IBridgeService {
    * Reset the service (useful when switching accounts)
    */
   reset(): void {
+    this.eventManager.dispose();
     this.adapterFactory.clearCache(this.userAddress ?? undefined);
     this.userAddress = null;
     this.wallet = null;
@@ -435,25 +588,25 @@ export class CCTPBridgeService implements IBridgeService {
       steps: [
         {
           id: "approve",
-          name: "Approve USDC",
+          name: "Approve",
           status: "pending",
           timestamp: Date.now(),
         },
         {
           id: "burn",
-          name: "Burn on source chain",
+          name: "Burn",
           status: "pending",
           timestamp: Date.now(),
         },
         {
-          id: "attest",
+          id: "attestation",
           name: "Attestation",
           status: "pending",
           timestamp: Date.now(),
         },
         {
           id: "mint",
-          name: "Mint on destination chain",
+          name: "Mint",
           status: "pending",
           timestamp: Date.now(),
         },
@@ -477,6 +630,10 @@ export class CCTPBridgeService implements IBridgeService {
     if (firstStep) {
       firstStep.status = "in_progress";
     }
+
+    // Store recipient address for retry
+    transaction.recipientAddress = context.recipientAddress;
+
     await this.storage.saveTransaction(transaction);
 
     // Execute bridge through Circle's Bridge Kit
@@ -493,6 +650,9 @@ export class CCTPBridgeService implements IBridgeService {
       token: "USDC",
     });
 
+    // Store the bridge result for potential retry
+    transaction.bridgeResult = result;
+
     // Process the result
     await this.processBridgeResult(transaction, result);
   }
@@ -508,9 +668,14 @@ export class CCTPBridgeService implements IBridgeService {
       transaction.status = "completed";
       transaction.completedAt = Date.now();
 
-      // Mark all steps as completed
+      // Update steps from result (marks as completed and extracts hashes)
+      this.updateStepsFromResult(transaction, result);
+
+      // Mark any remaining steps as completed (in case result has fewer steps)
       transaction.steps.forEach((step) => {
-        step.status = "completed";
+        if (step.status !== "completed") {
+          step.status = "completed";
+        }
       });
 
       // Extract transaction hashes
@@ -525,6 +690,10 @@ export class CCTPBridgeService implements IBridgeService {
       // Update steps based on result
       this.updateStepsFromResult(transaction, result);
     }
+
+    // Save transaction with updated steps immediately
+    transaction.updatedAt = Date.now();
+    await this.storage.saveTransaction(transaction);
   }
 
   /**
@@ -572,6 +741,8 @@ export class CCTPBridgeService implements IBridgeService {
 
   /**
    * Update transaction steps from result
+   * Matches Bridge Kit steps by name to our transaction steps
+   * Also manages the virtual "Attestation" step
    */
   private updateStepsFromResult(
     transaction: BridgeTransaction,
@@ -579,32 +750,102 @@ export class CCTPBridgeService implements IBridgeService {
   ): void {
     if (!result.steps) return;
 
-    result.steps.forEach((resultStep, index) => {
-      const step = transaction.steps[index];
-      if (!step) return;
+    // Track if burn completed and mint started for attestation step
+    let burnCompleted = false;
+    let mintStartedOrCompleted = false;
 
-      // Update step status
-      step.status =
-        resultStep.state === "success"
-          ? "completed"
-          : resultStep.state === "error"
-            ? "failed"
-            : "pending";
+    result.steps.forEach((resultStep) => {
+      // Match by step name (case-insensitive)
+      const stepName = String(resultStep.name).toLowerCase();
+      const matchingStep = transaction.steps.find(
+        (s) => s.name.toLowerCase() === stepName,
+      );
+
+      if (!matchingStep) {
+        // Skip warning for attestation since it's not in Bridge Kit
+        if (stepName !== "attestation") {
+          console.warn(
+            `No matching step found for Bridge Kit step: ${resultStep.name}`,
+          );
+        }
+        return;
+      }
+
+      // Update step status based on Bridge Kit state
+      if (resultStep.state === "success") {
+        matchingStep.status = "completed";
+        matchingStep.error = undefined; // Clear any stale errors from previous attempts
+        if (stepName === "burn") burnCompleted = true;
+      } else if (resultStep.state === "error") {
+        matchingStep.status = "failed";
+      } else if (resultStep.state === "pending") {
+        matchingStep.status = "in_progress";
+        if (stepName === "mint") mintStartedOrCompleted = true;
+      } else if (resultStep.state === "noop") {
+        // noop means the step was not needed (e.g., already approved)
+        matchingStep.status = "completed";
+      }
+
+      // Track mint progress - include "error" because if mint failed,
+      // it means it was attempted, which means attestation completed
+      if (
+        stepName === "mint" &&
+        (resultStep.state === "success" || resultStep.state === "pending" || resultStep.state === "error")
+      ) {
+        mintStartedOrCompleted = true;
+      }
 
       // Extract transaction hash if available
       if ("txHash" in resultStep && resultStep.txHash) {
-        step.txHash = String(resultStep.txHash);
+        matchingStep.txHash = String(resultStep.txHash);
       }
 
       // Extract error if step failed
       if (resultStep.state === "error") {
         if ("errorMessage" in resultStep && resultStep.errorMessage) {
-          step.error = String(resultStep.errorMessage);
-        } else if ("error" in resultStep && resultStep.error instanceof Error) {
-          step.error = resultStep.error.message;
+          matchingStep.error = String(resultStep.errorMessage);
+        } else if ("error" in resultStep) {
+          // Bridge Kit might include raw error objects
+          const errorObj = resultStep.error;
+          if (errorObj instanceof Error) {
+            matchingStep.error = errorObj.message;
+          } else if (errorObj && typeof errorObj === "object") {
+            // Extract meaningful error message from object without JSON.stringify
+            // Try common error message properties with type guards
+            let message = "Transaction step failed";
+            if ("message" in errorObj && typeof errorObj.message === "string") {
+              message = errorObj.message;
+            } else if ("reason" in errorObj && typeof errorObj.reason === "string") {
+              message = errorObj.reason;
+            } else if ("code" in errorObj && typeof errorObj.code === "string") {
+              message = errorObj.code;
+            }
+            matchingStep.error = message;
+          } else {
+            matchingStep.error = String(errorObj);
+          }
         }
       }
+
+      // Update timestamp
+      matchingStep.timestamp = Date.now();
     });
+
+    // Manage virtual attestation step
+    const attestationStep = transaction.steps.find(
+      (s) => s.id === "attestation",
+    );
+    if (attestationStep) {
+      if (mintStartedOrCompleted) {
+        // Mint has started or completed, so attestation is done
+        attestationStep.status = "completed";
+        attestationStep.timestamp = Date.now();
+      } else if (burnCompleted) {
+        // Burn completed but mint hasn't started, attestation is in progress
+        attestationStep.status = "in_progress";
+        attestationStep.timestamp = Date.now();
+      }
+    }
   }
 
   /**
