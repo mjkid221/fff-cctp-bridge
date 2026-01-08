@@ -297,9 +297,9 @@ export function BridgeHeader() {
                   <Button
                     variant="ghost"
                     className={cn(
-                      "text-foreground h-7 rounded-md px-1.5 transition-colors sm:h-8 sm:px-2.5",
+                      "text-foreground h-7 w-[90px] rounded-md px-1.5 transition-colors sm:h-8 sm:min-w-[100px] sm:px-2.5",
                       "hover:bg-muted/50 focus:ring-0 focus:outline-none",
-                      "flex items-center gap-1 sm:gap-1.5",
+                      "flex items-center justify-center gap-1 sm:gap-1.5",
                     )}
                   >
                     <div className="size-1.5 rounded-full bg-green-500" />
@@ -336,9 +336,9 @@ export function BridgeHeader() {
                 onClick={() => setShowAuthFlow(true)}
                 variant="ghost"
                 className={cn(
-                  "text-foreground h-7 rounded-md px-1.5 transition-colors sm:h-8 sm:px-2.5",
+                  "text-foreground h-7 w-[90px] rounded-md px-1.5 transition-colors sm:h-8 sm:min-w-[100px] sm:px-2.5",
                   "hover:bg-muted/50 focus:ring-0 focus:outline-none",
-                  "flex items-center gap-1 sm:gap-1.5",
+                  "flex items-center justify-center gap-1 sm:gap-1.5",
                 )}
               >
                 <Wallet className="size-3 sm:size-3.5" />

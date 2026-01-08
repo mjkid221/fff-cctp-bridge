@@ -54,6 +54,15 @@ export {
 } from "./hooks";
 export type { WalletOption } from "./hooks";
 
+// Query keys for React Query cache management
+export { bridgeKeys } from "./query-keys";
+export type {
+  BridgeQueryKey,
+  BalanceQueryKey,
+  EstimateQueryKey,
+  RouteQueryKey,
+} from "./query-keys";
+
 // Address validation
 export {
   isValidEVMAddress,

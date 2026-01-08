@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useDynamicContext,
   useDynamicModals,
@@ -15,6 +16,7 @@ import { useBridgeStore } from "./store";
 import type { BridgeParams, BridgeEstimate, BridgeTransaction } from "./types";
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
+import { bridgeKeys } from "./query-keys";
 
 /**
  * Custom hook that provides wallets filtered by type with proper type guards
@@ -144,6 +146,8 @@ export function useBridgeEstimate() {
  * Hook for executing bridge transactions
  */
 export function useBridge() {
+  const queryClient = useQueryClient();
+  const userAddress = useBridgeStore((state) => state.userAddress);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addTransaction = useBridgeStore((state) => state.addTransaction);
@@ -164,7 +168,13 @@ export function useBridge() {
         addTransaction(transaction);
         setCurrentTransaction(transaction);
 
-        // No polling needed - event manager handles real-time updates
+        // Invalidate balance caches for both chains after bridge
+        void queryClient.invalidateQueries({
+          queryKey: bridgeKeys.balance(params.fromChain, userAddress),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: bridgeKeys.balance(params.toChain, userAddress),
+        });
 
         return transaction;
       } catch (err) {
@@ -176,7 +186,7 @@ export function useBridge() {
         setIsLoading(false);
       }
     },
-    [addTransaction, setCurrentTransaction],
+    [addTransaction, setCurrentTransaction, userAddress, queryClient],
   );
 
   return { executeBridge, isLoading, error };
@@ -254,42 +264,36 @@ export function useRouteSupport(
 }
 
 /**
- * Hook for wallet balance
+ * Hook for wallet balance using React Query
+ * Automatically waits for service initialization via the enabled option
  */
 export function useWalletBalance(chainId: SupportedChainId | null) {
-  const [balance, setBalance] = useState<string>("0.00");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { primaryWallet } = useDynamicContext();
+  // userAddress is set AFTER service.initialize() completes in useBridgeInit
+  // So userAddress !== null means the service is ready
+  const userAddress = useBridgeStore((state) => state.userAddress);
 
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!primaryWallet?.address || !chainId) {
-        setBalance("0.00");
-        return;
-      }
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: bridgeKeys.balance(chainId, userAddress),
+    queryFn: async () => {
+      const service = getBridgeService();
+      return service.getBalance(chainId!);
+    },
+    // CRITICAL: Only fetch when service is initialized (userAddress set)
+    enabled: !!userAddress && !!chainId,
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+  });
 
-      setIsLoading(true);
-      setError(null);
-      try {
-        const service = getBridgeService();
-        const tokenBalance = await service.getBalance(chainId);
-        setBalance(tokenBalance.formatted);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch balance";
-        console.error("Failed to fetch balance:", err);
-        setError(errorMessage);
-        setBalance("0.00");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchBalance();
-  }, [primaryWallet, chainId]);
-
-  return { balance, isLoading, error };
+  return {
+    balance: data?.formatted ?? "0.00",
+    rawBalance: data?.balance ?? "0",
+    isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch,
+  };
 }
 
 /**
