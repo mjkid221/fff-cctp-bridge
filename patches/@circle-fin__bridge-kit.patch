@@ -1,0 +1,630 @@
+diff --git a/chains.cjs b/chains.cjs
+index 53cee072a738ba2393dbb8a9b70de67247b26857..c1ef6c5ea8d3927d90d5ee63095795358e379cfe 100644
+--- a/chains.cjs
++++ b/chains.cjs
+@@ -62,6 +62,8 @@ var Blockchain;
+     Blockchain["Ink_Testnet"] = "Ink_Testnet";
+     Blockchain["Linea"] = "Linea";
+     Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
++    Blockchain["Monad"] = "Monad";
++    Blockchain["Monad_Testnet"] = "Monad_Testnet";
+     Blockchain["NEAR"] = "NEAR";
+     Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
+     Blockchain["Noble"] = "Noble";
+@@ -153,6 +155,7 @@ exports.BridgeChain = void 0;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -172,6 +175,7 @@ exports.BridgeChain = void 0;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -1155,6 +1159,82 @@ const LineaSepolia = defineChain({
+     },
+ });
+ 
++/**
++ * Monad Mainnet chain definition
++ * @remarks
++ * This represents the official production network for the Monad blockchain.
++ */
++const Monad = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad,
++    name: 'Monad',
++    title: 'Monad Mainnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 143,
++    isTestnet: false,
++    explorerUrl: 'https://monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
++                messageTransmitter: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_MAINNET,
++    },
++});
++
++/**
++ * Monad Testnet chain definition
++ * @remarks
++ * This represents the official test network for the Monad blockchain.
++ */
++const MonadTestnet = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad_Testnet,
++    name: 'Monad Testnet',
++    title: 'Monad Testnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 10143,
++    isTestnet: true,
++    explorerUrl: 'https://testnet.monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://testnet-rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x534b2f3A21130d7a60830c2Df862319e593943A3',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
++                messageTransmitter: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_TESTNET,
++    },
++});
++
+ /**
+  * NEAR Protocol Mainnet chain definition
+  * @remarks
+@@ -2416,6 +2496,8 @@ exports.Ink = Ink;
+ exports.InkTestnet = InkTestnet;
+ exports.Linea = Linea;
+ exports.LineaSepolia = LineaSepolia;
++exports.Monad = Monad;
++exports.MonadTestnet = MonadTestnet;
+ exports.Optimism = Optimism;
+ exports.OptimismSepolia = OptimismSepolia;
+ exports.Plume = Plume;
+diff --git a/chains.d.ts b/chains.d.ts
+index 16795b7ab8a243fe90a35dececac909785953e61..1e65951e99fe9a95027f3c1cc567e7e281bcf37e 100644
+--- a/chains.d.ts
++++ b/chains.d.ts
+@@ -83,7 +83,9 @@ declare enum Blockchain {
+     XDC = "XDC",
+     XDC_Apothem = "XDC_Apothem",
+     ZKSync_Era = "ZKSync_Era",
+-    ZKSync_Sepolia = "ZKSync_Sepolia"
++    ZKSync_Sepolia = "ZKSync_Sepolia",
++    Monad = "Monad",
++    Monad_Testnet = "Monad_Testnet"
+ }
+ /**
+  * Enumeration of blockchains that support cross-chain bridging via CCTPv2.
+@@ -149,6 +151,7 @@ declare enum BridgeChain {
+     Unichain = "Unichain",
+     World_Chain = "World_Chain",
+     XDC = "XDC",
++    Monad = "Monad",
+     Arc_Testnet = "Arc_Testnet",
+     Arbitrum_Sepolia = "Arbitrum_Sepolia",
+     Avalanche_Fuji = "Avalanche_Fuji",
+@@ -166,7 +169,8 @@ declare enum BridgeChain {
+     Sonic_Testnet = "Sonic_Testnet",
+     Unichain_Sepolia = "Unichain_Sepolia",
+     World_Chain_Sepolia = "World_Chain_Sepolia",
+-    XDC_Apothem = "XDC_Apothem"
++    XDC_Apothem = "XDC_Apothem",
++    Monad_Testnet = "Monad_Testnet"
+ }
+ 
+ /**
+@@ -1611,4 +1615,80 @@ declare const XDCApothem: {
+     };
+ };
+ 
+-export { Arbitrum, ArbitrumSepolia, ArcTestnet, Avalanche, AvalancheFuji, Base, BaseSepolia, BridgeChain, Codex, CodexTestnet, Ethereum, EthereumSepolia, HyperEVM, HyperEVMTestnet, Ink, InkTestnet, Linea, LineaSepolia, Optimism, OptimismSepolia, Plume, PlumeTestnet, Polygon, PolygonAmoy, Sei, SeiTestnet, Solana, SolanaDevnet, Sonic, SonicTestnet, Unichain, UnichainSepolia, WorldChain, WorldChainSepolia, XDC, XDCApothem };
++/**
++ * Monad Mainnet chain definition
++ * @remarks
++ * This represents the official production network for the Monad blockchain.
++ */
++declare const Monad: {
++    readonly type: "evm";
++    readonly chain: Blockchain.Monad;
++    readonly name: "Monad";
++    readonly title: "Monad Mainnet";
++    readonly nativeCurrency: {
++        readonly name: "Monad";
++        readonly symbol: "MON";
++        readonly decimals: 18;
++    };
++    readonly chainId: 143;
++    readonly isTestnet: false;
++    readonly explorerUrl: "https://monadexplorer.com/tx/{hash}";
++    readonly rpcEndpoints: readonly ["https://rpc.monad.xyz"];
++    readonly eurcAddress: null;
++    readonly usdcAddress: "0x754704Bc059F8C67012fEd69BC8A327a5aafb603";
++    readonly cctp: {
++        readonly domain: 15;
++        readonly contracts: {
++            readonly v2: {
++                readonly type: "split";
++                readonly tokenMessenger: "0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d";
++                readonly messageTransmitter: "0x81D40F21F12A8F0E3252Bccb954D722d4c464B64";
++                readonly confirmations: 1;
++                readonly fastConfirmations: 1;
++            };
++        };
++    };
++    readonly kitContracts: {
++        readonly bridge: "0xB3FA262d0fB521cc93bE83d87b322b8A23DAf3F0";
++    };
++};
++
++/**
++ * Monad Testnet chain definition
++ * @remarks
++ * This represents the official test network for the Monad blockchain.
++ */
++declare const MonadTestnet: {
++    readonly type: "evm";
++    readonly chain: Blockchain.Monad_Testnet;
++    readonly name: "Monad Testnet";
++    readonly title: "Monad Testnet";
++    readonly nativeCurrency: {
++        readonly name: "Monad";
++        readonly symbol: "MON";
++        readonly decimals: 18;
++    };
++    readonly chainId: 10143;
++    readonly isTestnet: true;
++    readonly explorerUrl: "https://testnet.monadexplorer.com/tx/{hash}";
++    readonly rpcEndpoints: readonly ["https://testnet-rpc.monad.xyz"];
++    readonly eurcAddress: null;
++    readonly usdcAddress: "0x534b2f3A21130d7a60830c2Df862319e593943A3";
++    readonly cctp: {
++        readonly domain: 15;
++        readonly contracts: {
++            readonly v2: {
++                readonly type: "split";
++                readonly tokenMessenger: "0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA";
++                readonly messageTransmitter: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275";
++                readonly confirmations: 1;
++                readonly fastConfirmations: 1;
++            };
++        };
++    };
++    readonly kitContracts: {
++        readonly bridge: "0xC5567a5E3370d4DBfB0540025078e283e36A363d";
++    };
++};
++
++export { Arbitrum, ArbitrumSepolia, ArcTestnet, Avalanche, AvalancheFuji, Base, BaseSepolia, BridgeChain, Codex, CodexTestnet, Ethereum, EthereumSepolia, HyperEVM, HyperEVMTestnet, Ink, InkTestnet, Linea, LineaSepolia, Monad, MonadTestnet, Optimism, OptimismSepolia, Plume, PlumeTestnet, Polygon, PolygonAmoy, Sei, SeiTestnet, Solana, SolanaDevnet, Sonic, SonicTestnet, Unichain, UnichainSepolia, WorldChain, WorldChainSepolia, XDC, XDCApothem };
+diff --git a/chains.mjs b/chains.mjs
+index 6103e45362666247610ad1e9dc917105ae0ed918..d4729401513dfa8f84192d9e5ffdc6002929e82c 100644
+--- a/chains.mjs
++++ b/chains.mjs
+@@ -90,6 +90,8 @@ var Blockchain;
+     Blockchain["XDC_Apothem"] = "XDC_Apothem";
+     Blockchain["ZKSync_Era"] = "ZKSync_Era";
+     Blockchain["ZKSync_Sepolia"] = "ZKSync_Sepolia";
++    Blockchain["Monad"] = "Monad";
++    Blockchain["Monad_Testnet"] = "Monad_Testnet";
+ })(Blockchain || (Blockchain = {}));
+ // -----------------------------------------------------------------------------
+ // Bridge Chain Enum (CCTPv2 Supported Chains)
+@@ -160,6 +162,7 @@ var BridgeChain;
+     BridgeChain["Unichain"] = "Unichain";
+     BridgeChain["World_Chain"] = "World_Chain";
+     BridgeChain["XDC"] = "XDC";
++    BridgeChain["Monad"] = "Monad";
+     // Testnet chains with CCTPv2 support
+     BridgeChain["Arc_Testnet"] = "Arc_Testnet";
+     BridgeChain["Arbitrum_Sepolia"] = "Arbitrum_Sepolia";
+@@ -179,6 +182,7 @@ var BridgeChain;
+     BridgeChain["Unichain_Sepolia"] = "Unichain_Sepolia";
+     BridgeChain["World_Chain_Sepolia"] = "World_Chain_Sepolia";
+     BridgeChain["XDC_Apothem"] = "XDC_Apothem";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+ })(BridgeChain || (BridgeChain = {}));
+ 
+ /**
+@@ -2210,6 +2214,82 @@ defineChain({
+     cctp: null,
+ });
+ 
++/**
++ * Monad Mainnet chain definition
++ * @remarks
++ * This represents the official production network for the Monad blockchain.
++ */
++const Monad = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad,
++    name: 'Monad',
++    title: 'Monad Mainnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 143,
++    isTestnet: false,
++    explorerUrl: 'https://monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
++                messageTransmitter: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_MAINNET,
++    },
++});
++
++/**
++ * Monad Testnet chain definition
++ * @remarks
++ * This represents the official test network for the Monad blockchain.
++ */
++const MonadTestnet = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad_Testnet,
++    name: 'Monad Testnet',
++    title: 'Monad Testnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 10143,
++    isTestnet: true,
++    explorerUrl: 'https://testnet.monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://testnet-rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x534b2f3A21130d7a60830c2Df862319e593943A3',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
++                messageTransmitter: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_TESTNET,
++    },
++});
++
+ /**
+  * Base schema for common chain definition properties.
+  * This contains all properties shared between EVM and non-EVM chains.
+@@ -2397,5 +2477,5 @@ z.union([
+     })),
+ ]);
+ 
+-export { Arbitrum, ArbitrumSepolia, ArcTestnet, Avalanche, AvalancheFuji, Base, BaseSepolia, BridgeChain, Codex, CodexTestnet, Ethereum, EthereumSepolia, HyperEVM, HyperEVMTestnet, Ink, InkTestnet, Linea, LineaSepolia, Optimism, OptimismSepolia, Plume, PlumeTestnet, Polygon, PolygonAmoy, Sei, SeiTestnet, Solana, SolanaDevnet, Sonic, SonicTestnet, Unichain, UnichainSepolia, WorldChain, WorldChainSepolia, XDC, XDCApothem };
++export { Arbitrum, ArbitrumSepolia, ArcTestnet, Avalanche, AvalancheFuji, Base, BaseSepolia, BridgeChain, Codex, CodexTestnet, Ethereum, EthereumSepolia, HyperEVM, HyperEVMTestnet, Ink, InkTestnet, Linea, LineaSepolia, Monad, MonadTestnet, Optimism, OptimismSepolia, Plume, PlumeTestnet, Polygon, PolygonAmoy, Sei, SeiTestnet, Solana, SolanaDevnet, Sonic, SonicTestnet, Unichain, UnichainSepolia, WorldChain, WorldChainSepolia, XDC, XDCApothem };
+ //# sourceMappingURL=chains.mjs.map
+diff --git a/index.cjs b/index.cjs
+index 537928bd77de8fbed593111a47554bfc72cd1191..d12c84ab018120ba4b0df7faf739f7e9543edade 100644
+--- a/index.cjs
++++ b/index.cjs
+@@ -774,6 +774,8 @@ exports.Blockchain = void 0;
+     Blockchain["Ink_Testnet"] = "Ink_Testnet";
+     Blockchain["Linea"] = "Linea";
+     Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
++    Blockchain["Monad"] = "Monad";
++    Blockchain["Monad_Testnet"] = "Monad_Testnet";
+     Blockchain["NEAR"] = "NEAR";
+     Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
+     Blockchain["Noble"] = "Noble";
+@@ -865,6 +867,7 @@ exports.BridgeChain = void 0;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -884,6 +887,7 @@ exports.BridgeChain = void 0;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -1867,6 +1871,82 @@ const LineaSepolia = defineChain({
+     },
+ });
+ 
++/**
++ * Monad Mainnet chain definition
++ * @remarks
++ * This represents the official production network for the Monad blockchain.
++ */
++const Monad = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad,
++    name: 'Monad',
++    title: 'Monad Mainnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 143,
++    isTestnet: false,
++    explorerUrl: 'https://monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
++                messageTransmitter: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_MAINNET,
++    },
++});
++
++/**
++ * Monad Testnet chain definition
++ * @remarks
++ * This represents the official test network for the Monad blockchain.
++ */
++const MonadTestnet = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad_Testnet,
++    name: 'Monad Testnet',
++    title: 'Monad Testnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 10143,
++    isTestnet: true,
++    explorerUrl: 'https://testnet.monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://testnet-rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x534b2f3A21130d7a60830c2Df862319e593943A3',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
++                messageTransmitter: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_TESTNET,
++    },
++});
++
+ /**
+  * NEAR Protocol Mainnet chain definition
+  * @remarks
+@@ -2951,6 +3031,8 @@ var Blockchains = {
+     InkTestnet: InkTestnet,
+     Linea: Linea,
+     LineaSepolia: LineaSepolia,
++    Monad: Monad,
++    MonadTestnet: MonadTestnet,
+     NEAR: NEAR,
+     NEARTestnet: NEARTestnet,
+     Noble: Noble,
+diff --git a/index.d.ts b/index.d.ts
+index e1e195e28d9f851c6ce0514878a173777f29f7e6..1003029f673688563daa7e538607ff0f8837c3be 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -466,7 +466,9 @@ declare enum Blockchain {
+     XDC = "XDC",
+     XDC_Apothem = "XDC_Apothem",
+     ZKSync_Era = "ZKSync_Era",
+-    ZKSync_Sepolia = "ZKSync_Sepolia"
++    ZKSync_Sepolia = "ZKSync_Sepolia",
++    Monad = "Monad",
++    Monad_Testnet = "Monad_Testnet"
+ }
+ /**
+  * Enumeration of blockchains that support cross-chain bridging via CCTPv2.
+@@ -532,6 +534,7 @@ declare enum BridgeChain {
+     Unichain = "Unichain",
+     World_Chain = "World_Chain",
+     XDC = "XDC",
++    Monad = "Monad",
+     Arc_Testnet = "Arc_Testnet",
+     Arbitrum_Sepolia = "Arbitrum_Sepolia",
+     Avalanche_Fuji = "Avalanche_Fuji",
+@@ -549,7 +552,8 @@ declare enum BridgeChain {
+     Sonic_Testnet = "Sonic_Testnet",
+     Unichain_Sepolia = "Unichain_Sepolia",
+     World_Chain_Sepolia = "World_Chain_Sepolia",
+-    XDC_Apothem = "XDC_Apothem"
++    XDC_Apothem = "XDC_Apothem",
++    Monad_Testnet = "Monad_Testnet"
+ }
+ /**
+  * Type representing valid bridge chain identifiers.
+diff --git a/index.mjs b/index.mjs
+index 14a161e603804760f3f57ed14b09ce1dd6ed2a97..44619f5db7cb38e4dfac5303ba4d9db1760b8604 100644
+--- a/index.mjs
++++ b/index.mjs
+@@ -772,6 +772,8 @@ var Blockchain;
+     Blockchain["Ink_Testnet"] = "Ink_Testnet";
+     Blockchain["Linea"] = "Linea";
+     Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
++    Blockchain["Monad"] = "Monad";
++    Blockchain["Monad_Testnet"] = "Monad_Testnet";
+     Blockchain["NEAR"] = "NEAR";
+     Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
+     Blockchain["Noble"] = "Noble";
+@@ -863,6 +865,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -882,6 +885,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -1865,6 +1869,82 @@ const LineaSepolia = defineChain({
+     },
+ });
+ 
++/**
++ * Monad Mainnet chain definition
++ * @remarks
++ * This represents the official production network for the Monad blockchain.
++ */
++const Monad = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad,
++    name: 'Monad',
++    title: 'Monad Mainnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 143,
++    isTestnet: false,
++    explorerUrl: 'https://monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
++                messageTransmitter: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_MAINNET,
++    },
++});
++
++/**
++ * Monad Testnet chain definition
++ * @remarks
++ * This represents the official test network for the Monad blockchain.
++ */
++const MonadTestnet = defineChain({
++    type: 'evm',
++    chain: Blockchain.Monad_Testnet,
++    name: 'Monad Testnet',
++    title: 'Monad Testnet',
++    nativeCurrency: {
++        name: 'Monad',
++        symbol: 'MON',
++        decimals: 18,
++    },
++    chainId: 10143,
++    isTestnet: true,
++    explorerUrl: 'https://testnet.monadexplorer.com/tx/{hash}',
++    rpcEndpoints: ['https://testnet-rpc.monad.xyz'],
++    eurcAddress: null,
++    usdcAddress: '0x534b2f3A21130d7a60830c2Df862319e593943A3',
++    cctp: {
++        domain: 15,
++        contracts: {
++            v2: {
++                type: 'split',
++                tokenMessenger: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
++                messageTransmitter: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
++                confirmations: 1,
++                fastConfirmations: 1,
++            },
++        },
++    },
++    kitContracts: {
++        bridge: BRIDGE_CONTRACT_EVM_TESTNET,
++    },
++});
++
+ /**
+  * NEAR Protocol Mainnet chain definition
+  * @remarks
+@@ -2949,6 +3029,8 @@ var Blockchains = /*#__PURE__*/Object.freeze({
+     InkTestnet: InkTestnet,
+     Linea: Linea,
+     LineaSepolia: LineaSepolia,
++    Monad: Monad,
++    MonadTestnet: MonadTestnet,
+     NEAR: NEAR,
+     NEARTestnet: NEARTestnet,
+     Noble: Noble,

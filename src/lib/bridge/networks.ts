@@ -12,6 +12,10 @@ export type SupportedChainId =
   | "Base_Sepolia"
   | "Arbitrum"
   | "Arbitrum_Sepolia"
+  | "Monad"
+  | "Monad_Testnet"
+  | "HyperEVM"
+  | "HyperEVM_Testnet"
   | "Solana"
   | "Solana_Devnet";
 
@@ -97,6 +101,36 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
       decimals: 9,
     },
   },
+  Monad: {
+    id: "Monad",
+    name: "Monad",
+    displayName: "Monad",
+    type: "evm",
+    environment: "mainnet",
+    icon: "◈",
+    color: "from-purple-500/20 to-violet-600/20",
+    explorerUrl: "https://monadexplorer.com",
+    nativeCurrency: {
+      name: "Monad",
+      symbol: "MON",
+      decimals: 18,
+    },
+  },
+  HyperEVM: {
+    id: "HyperEVM",
+    name: "HyperEVM",
+    displayName: "HyperEVM",
+    type: "evm",
+    environment: "mainnet",
+    icon: "◇",
+    color: "from-emerald-500/20 to-teal-600/20",
+    explorerUrl: "https://hyperscan.com",
+    nativeCurrency: {
+      name: "Hype",
+      symbol: "HYPE",
+      decimals: 18,
+    },
+  },
 
   // Testnet Networks
   Ethereum_Sepolia: {
@@ -158,6 +192,36 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
       name: "Solana",
       symbol: "SOL",
       decimals: 9,
+    },
+  },
+  Monad_Testnet: {
+    id: "Monad_Testnet",
+    name: "Monad Testnet",
+    displayName: "Monad (Testnet)",
+    type: "evm",
+    environment: "testnet",
+    icon: "◈",
+    color: "from-purple-500/20 to-violet-600/20",
+    explorerUrl: "https://testnet.monadexplorer.com",
+    nativeCurrency: {
+      name: "Monad",
+      symbol: "MON",
+      decimals: 18,
+    },
+  },
+  HyperEVM_Testnet: {
+    id: "HyperEVM_Testnet",
+    name: "HyperEVM Testnet",
+    displayName: "HyperEVM (Testnet)",
+    type: "evm",
+    environment: "testnet",
+    icon: "◇",
+    color: "from-emerald-500/20 to-teal-600/20",
+    explorerUrl: "https://testnet.purrsec.com",
+    nativeCurrency: {
+      name: "Hype",
+      symbol: "HYPE",
+      decimals: 18,
     },
   },
 };

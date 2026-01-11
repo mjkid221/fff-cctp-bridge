@@ -8,10 +8,7 @@ import { SwapButton } from "./swap-button";
 import { DestinationAddressInput } from "./destination-address-input";
 import { WalletSelector } from "./wallet-selector";
 import { FeeSummaryCard } from "./fee-summary-card";
-import {
-  useAddNotification,
-  useUpdateNotification,
-} from "~/lib/notifications";
+import { useAddNotification, useUpdateNotification } from "~/lib/notifications";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -513,7 +510,7 @@ export function BridgeCard() {
                       <Skeleton className="h-3 w-20 sm:h-4 sm:w-24" />
                     ) : (
                       <span className="text-foreground font-medium">
-                        {(estimate?.receiveAmount ?? amount) || "0.00"} USDC
+                        {Number(estimate?.receiveAmount ?? 0).toFixed(6)} USDC
                       </span>
                     )}
                   </div>

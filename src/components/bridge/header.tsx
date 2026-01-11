@@ -80,7 +80,7 @@ export function BridgeHeader() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="border-border/40 bg-card/95 fixed top-0 right-0 left-0 z-200 h-12 w-full border-b backdrop-blur-xl"
+        className="border-border/40 bg-card/70 fixed top-0 right-0 left-0 z-200 h-12 w-full border-b backdrop-blur-xl"
       >
         <div className="flex h-full items-center justify-between px-3 sm:px-6">
           {/* Left section - Logo, app name, and menu */}

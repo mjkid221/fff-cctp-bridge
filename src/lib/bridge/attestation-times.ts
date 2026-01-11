@@ -1,7 +1,7 @@
 /**
  * CCTP Attestation Times
  * Based on Circle's official documentation
- * https://developers.circle.com/stablecoins/cctp-protocol-contract#block-confirmations
+ * https://developers.circle.com/cctp/required-block-confirmations
  */
 
 import type { SupportedChainId } from "./networks";
@@ -15,12 +15,16 @@ export const CCTP_ATTESTATION_TIMES: Record<SupportedChainId, number> = {
   Ethereum: 20, // ~20 seconds (Fast: 2 blocks)
   Arbitrum: 8, // ~8 seconds (Fast: 1 block)
   Base: 8, // ~8 seconds (Fast: 1 block)
+  Monad: 5, // ~5 seconds (Fast: sub-second finality)
+  HyperEVM: 5, // ~5 seconds (Fast: sub-second finality)
   Solana: 8, // ~8 seconds (Fast: 2-3 blocks)
 
   // Testnet - Using same times as mainnet equivalents
   Ethereum_Sepolia: 20, // ~20 seconds (Fast: 2 blocks)
   Arbitrum_Sepolia: 8, // ~8 seconds (Fast: 1 block)
   Base_Sepolia: 8, // ~8 seconds (Fast: 1 block)
+  Monad_Testnet: 5, // ~5 seconds (Fast: sub-second finality)
+  HyperEVM_Testnet: 5, // ~5 seconds (Fast: sub-second finality)
   Solana_Devnet: 8, // ~8 seconds (Fast: 2-3 blocks)
 };
 
@@ -34,12 +38,16 @@ export const CCTP_STANDARD_ATTESTATION_TIMES: Record<SupportedChainId, number> =
     Ethereum: 13 * 60, // ~13 minutes (~65 blocks)
     Arbitrum: 13 * 60, // ~13 minutes (~65 ETH blocks)
     Base: 13 * 60, // ~13 minutes (~65 ETH blocks)
+    Monad: 5, // ~5 seconds (sub-second finality)
+    HyperEVM: 5, // ~5 seconds (sub-second finality)
     Solana: 25, // ~25 seconds (32 blocks for finality)
 
     // Testnet - Using same times as mainnet equivalents
     Ethereum_Sepolia: 13 * 60, // ~13 minutes
     Arbitrum_Sepolia: 13 * 60, // ~13 minutes
     Base_Sepolia: 13 * 60, // ~13 minutes
+    Monad_Testnet: 5, // ~5 seconds (sub-second finality)
+    HyperEVM_Testnet: 5, // ~5 seconds (sub-second finality)
     Solana_Devnet: 25, // ~25 seconds
   };
 

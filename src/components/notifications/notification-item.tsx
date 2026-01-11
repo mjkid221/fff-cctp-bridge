@@ -39,7 +39,9 @@ function getStatusIcon(status: Notification["status"]) {
     case "failed":
       return <AlertCircle className="size-5 text-red-500" />;
     case "in_progress":
-      return <Loader2 className="size-5 animate-spin text-gray-600 dark:text-gray-400" />;
+      return (
+        <Loader2 className="size-5 animate-spin text-gray-600 dark:text-gray-400" />
+      );
     case "pending":
       return <Clock className="size-5 text-yellow-500" />;
     case "info":
@@ -48,7 +50,10 @@ function getStatusIcon(status: Notification["status"]) {
   }
 }
 
-export function NotificationItem({ notification, onAction }: NotificationItemProps) {
+export function NotificationItem({
+  notification,
+  onAction,
+}: NotificationItemProps) {
   const removeNotification = useRemoveNotification();
   const markAsRead = useMarkAsRead();
 
@@ -78,10 +83,10 @@ export function NotificationItem({ notification, onAction }: NotificationItemPro
       }}
       onClick={handleClick}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-xl border border-border/30 backdrop-blur-xl p-4 transition-all",
-        "hover:bg-muted/50 hover:shadow-lg hover:border-border/50",
+        "group border-border/30 relative cursor-pointer overflow-hidden rounded-xl border p-4 backdrop-blur-xl transition-all",
+        "hover:bg-muted/50 hover:border-border/50 hover:shadow-lg",
         "bg-muted/20",
-        !notification.read && "ring-2 ring-primary/30 shadow-md",
+        !notification.read && "ring-primary/30 shadow-md ring-2",
       )}
     >
       <div className="flex items-start gap-3">
@@ -93,60 +98,46 @@ export function NotificationItem({ notification, onAction }: NotificationItemPro
         {/* Content */}
         <div className="min-w-0 flex-1">
           {/* Header with title and timestamp */}
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-foreground text-sm font-semibold leading-tight">
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <p className="text-foreground text-sm leading-tight font-semibold">
               {notification.title}
             </p>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex shrink-0 items-center gap-1.5">
               {/* Timestamp badge */}
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+              <span className="text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 text-[10px] font-medium">
                 {formatTimestamp(notification.timestamp)}
               </span>
               {/* Dismiss button */}
               <button
                 onClick={handleDismiss}
-                className="rounded-full p-1 opacity-0 transition-all hover:bg-muted/50 group-hover:opacity-100"
+                className="hover:bg-muted/50 rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
                 aria-label="Dismiss notification"
               >
-                <X className="size-3.5 text-muted-foreground" />
+                <X className="text-muted-foreground size-3.5" />
               </button>
             </div>
           </div>
 
           {/* Message */}
-          <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2 mb-2">
+          <p className="text-muted-foreground mb-2 line-clamp-2 text-xs leading-relaxed">
             {notification.message}
           </p>
 
-          {/* Bridge transaction details with inline action button */}
+          {/* Bridge transaction details */}
           {notification.fromChain && notification.toChain && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-[11px] font-medium bg-muted/50 rounded-full px-3 py-1.5">
-                <span className="text-foreground">{notification.fromChain}</span>
-                <ArrowRight className="size-3 text-muted-foreground" />
-                <span className="text-foreground">{notification.toChain}</span>
-                {notification.amount && (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-foreground font-semibold">{notification.amount} {notification.token || "USDC"}</span>
-                  </>
-                )}
-              </div>
-
-              {/* Action button - compact inline version */}
-              {notification.actionLabel && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-[10px] font-semibold transition-all",
-                    notification.status === "failed"
-                      ? "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  )}
-                >
-                  View
-                </motion.button>
+            <div className="bg-muted/50 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium">
+              <span className="text-foreground">
+                {notification.fromChain}
+              </span>
+              <ArrowRight className="text-muted-foreground size-3" />
+              <span className="text-foreground">{notification.toChain}</span>
+              {notification.amount && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-foreground font-semibold">
+                    {notification.amount} {notification.token || "USDC"}
+                  </span>
+                </>
               )}
             </div>
           )}
@@ -157,11 +148,11 @@ export function NotificationItem({ notification, onAction }: NotificationItemPro
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={cn(
-                "mt-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-all backdrop-blur-xl",
+                "mt-2 rounded-full px-4 py-1.5 text-xs font-semibold backdrop-blur-xl transition-all",
                 "shadow-md active:shadow-sm",
                 notification.status === "failed"
-                  ? "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-red-500/25"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-red-500/25 hover:from-red-600 hover:to-red-700"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
               )}
             >
               {notification.actionLabel}
@@ -172,7 +163,7 @@ export function NotificationItem({ notification, onAction }: NotificationItemPro
 
       {/* Unread indicator */}
       {!notification.read && (
-        <div className="absolute right-2 top-2 size-2 rounded-full bg-primary" />
+        <div className="bg-primary absolute top-2 right-2 size-2 rounded-full" />
       )}
     </motion.div>
   );
