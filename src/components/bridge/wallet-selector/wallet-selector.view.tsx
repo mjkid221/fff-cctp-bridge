@@ -3,98 +3,21 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronDown, Wallet } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { useState, useRef, useEffect } from "react";
-import type { NetworkType } from "~/lib/bridge/networks";
+import { formatAddress, getWalletName } from "./wallet-selector.hooks";
+import type { WalletSelectorViewProps } from "./wallet-selector.types";
 
-interface WalletOption {
-  id: string;
-  address: string;
-  connector: {
-    key: string;
-    name?: string;
-  };
-}
-
-interface WalletSelectorProps {
-  wallets: WalletOption[];
-  selectedWalletId: string | null;
-  onSelectWallet: (walletId: string) => void;
-  label: string;
-  networkType: NetworkType | null;
-  placeholder?: string;
-}
-
-export function WalletSelector({
-  wallets,
+export function WalletSelectorView({
+  label,
+  placeholder,
+  isOpen,
+  setIsOpen,
+  dropdownRef,
+  compatibleWallets,
+  selectedWallet,
   selectedWalletId,
   onSelectWallet,
-  label,
   networkType,
-  placeholder = "Select wallet",
-}: WalletSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Filter wallets by network type compatibility
-  const compatibleWallets = wallets.filter((wallet) => {
-    if (!networkType) return true;
-
-    const connectorKey = String(wallet.connector.key).toLowerCase();
-
-    switch (networkType) {
-      case "evm":
-        return (
-          connectorKey.includes("metamask") ||
-          connectorKey.includes("coinbase") ||
-          connectorKey.includes("walletconnect") ||
-          connectorKey.includes("rainbow") ||
-          (connectorKey.includes("phantom") && connectorKey.includes("evm")) ||
-          (!connectorKey.includes("solana") && !connectorKey.includes("sui"))
-        );
-
-      case "solana":
-        return (
-          (connectorKey.includes("phantom") && !connectorKey.includes("evm")) ||
-          connectorKey.includes("solana") ||
-          connectorKey.includes("solflare") ||
-          connectorKey.includes("backpack")
-        );
-
-      case "sui":
-        return connectorKey.includes("sui");
-
-      default:
-        return false;
-    }
-  });
-
-  const selectedWallet = compatibleWallets.find(
-    (w) => w.id === selectedWalletId,
-  );
-
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const getWalletName = (wallet: WalletOption) => {
-    return wallet.connector.name || wallet.connector.key;
-  };
-
+}: WalletSelectorViewProps) {
   if (compatibleWallets.length === 0) {
     return (
       <div className="space-y-2">

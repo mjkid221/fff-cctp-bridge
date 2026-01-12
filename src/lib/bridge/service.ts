@@ -14,7 +14,7 @@ import type {
 import { BridgeStorage } from "./storage";
 import { NETWORK_CONFIGS, isRouteSupported } from "./networks";
 import type { SupportedChainId } from "./networks";
-import { getAdapterFactory, type AdapterFactory } from "./adapters/factory";
+import { getAdapterFactory, type AdapterFactory, EVMAdapterCreator } from "./adapters/factory";
 import { getBalanceService, type BalanceService } from "./balance/service";
 import type { TokenBalance } from "./balance/service";
 import { getAttestationTime } from "./attestation-times";
@@ -123,9 +123,54 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     try {
+      // Pass chain ID for environment-specific RPC selection (important for Solana devnet/mainnet)
       return await this.adapterFactory.getAdapter(
         compatibleWallet,
         network.type,
+        chain,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Failed to get adapter for ${chain}: ${message}`);
+    }
+  }
+
+  /**
+   * Get adapter for a specific chain using an explicit wallet
+   * This allows passing a specific wallet rather than auto-finding one
+   */
+  private async getAdapterForChainWithWallet(
+    chain: SupportedChainId,
+    wallet?: Wallet<WalletConnectorCore.WalletConnector>,
+  ): Promise<AdapterContext["adapter"]> {
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    // Use provided wallet or find a compatible one
+    const targetWallet =
+      wallet ??
+      this.wallets.find((w) => {
+        try {
+          const creator = this.adapterFactory.getCreator(network.type);
+          return creator?.canHandle(w) ?? false;
+        } catch {
+          return false;
+        }
+      });
+
+    if (!targetWallet) {
+      throw new Error(
+        `No compatible wallet for ${network.type} network. Please connect a ${network.type.toUpperCase()} wallet first.`,
+      );
+    }
+
+    try {
+      return await this.adapterFactory.getAdapter(
+        targetWallet,
+        network.type,
+        chain,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -540,12 +585,47 @@ export class CCTPBridgeService implements IBridgeService {
 
   /**
    * Create operation context with adapters
+   * Handles network switching for EVM destination chains before adapter creation
    */
   private async createOperationContext(
     params: BridgeParams,
   ): Promise<BridgeOperationContext> {
-    const fromAdapter = await this.getAdapterForChain(params.fromChain);
-    const toAdapter = await this.getAdapterForChain(params.toChain);
+    const fromNetwork = NETWORK_CONFIGS[params.fromChain];
+    const toNetwork = NETWORK_CONFIGS[params.toChain];
+
+    // CRITICAL: For EVM destination chains, switch the EVM wallet to the correct network
+    // BEFORE creating the adapter. This prevents "Unrecognized chain ID" errors when
+    // the primary wallet is a different chain type (e.g., Solana)
+    if (toNetwork.type === "evm" && toNetwork.evmChainId && params.destWallet) {
+      console.log(
+        `[Bridge Service] Switching destination EVM wallet to chain ${toNetwork.evmChainId} (${params.toChain})`,
+      );
+      await EVMAdapterCreator.switchNetwork(
+        params.destWallet,
+        toNetwork.evmChainId,
+      );
+    }
+
+    // Similarly handle source chain EVM network switching if needed
+    if (fromNetwork.type === "evm" && fromNetwork.evmChainId && params.sourceWallet) {
+      console.log(
+        `[Bridge Service] Switching source EVM wallet to chain ${fromNetwork.evmChainId} (${params.fromChain})`,
+      );
+      await EVMAdapterCreator.switchNetwork(
+        params.sourceWallet,
+        fromNetwork.evmChainId,
+      );
+    }
+
+    // Create adapters using explicit wallets if provided
+    const fromAdapter = await this.getAdapterForChainWithWallet(
+      params.fromChain,
+      params.sourceWallet,
+    );
+    const toAdapter = await this.getAdapterForChainWithWallet(
+      params.toChain,
+      params.destWallet,
+    );
 
     return {
       transactionId: nanoid(),

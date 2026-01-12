@@ -132,6 +132,7 @@ export {
   NETWORK_CONFIGS,
   getNetworksByEnvironment,
   isRouteSupported,
+  getExplorerTxUrl,
 } from "./networks";
 export type {
   NetworkEnvironment,

@@ -31,6 +31,7 @@ export interface NetworkConfig {
   color: string;
   explorerUrl: string;
   dynamicChainId?: string; // Dynamic's network identifier for programmatic switching
+  evmChainId?: number; // Numeric EVM chain ID for network switching
   nativeCurrency: {
     name: string;
     symbol: string;
@@ -49,6 +50,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "⟠",
     color: "from-blue-500/20 to-blue-600/20",
     explorerUrl: "https://etherscan.io",
+    evmChainId: 1,
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -64,6 +66,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "◐",
     color: "from-blue-600/20 to-indigo-600/20",
     explorerUrl: "https://basescan.org",
+    evmChainId: 8453,
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -79,6 +82,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "◆",
     color: "from-cyan-500/20 to-blue-500/20",
     explorerUrl: "https://arbiscan.io",
+    evmChainId: 42161,
     nativeCurrency: {
       name: "Ether",
       symbol: "ETH",
@@ -142,6 +146,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "⟠",
     color: "from-blue-500/20 to-blue-600/20",
     explorerUrl: "https://sepolia.etherscan.io",
+    evmChainId: 11155111,
     nativeCurrency: {
       name: "Sepolia Ether",
       symbol: "ETH",
@@ -157,6 +162,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "◐",
     color: "from-blue-600/20 to-indigo-600/20",
     explorerUrl: "https://sepolia.basescan.org",
+    evmChainId: 84532,
     nativeCurrency: {
       name: "Sepolia Ether",
       symbol: "ETH",
@@ -172,6 +178,7 @@ export const NETWORK_CONFIGS: Record<SupportedChainId, NetworkConfig> = {
     icon: "◆",
     color: "from-cyan-500/20 to-blue-500/20",
     explorerUrl: "https://sepolia.arbiscan.io",
+    evmChainId: 421614,
     nativeCurrency: {
       name: "Sepolia Ether",
       symbol: "ETH",
@@ -254,4 +261,25 @@ export function isRouteSupported(
 
   // Must be on the same environment (mainnet <-> mainnet, testnet <-> testnet)
   return fromNetwork.environment === toNetwork.environment;
+}
+
+/**
+ * Get the full transaction explorer URL for a given chain and transaction hash
+ * Handles Solana devnet's special ?cluster=devnet query param
+ */
+export function getExplorerTxUrl(
+  chainId: SupportedChainId,
+  txHash: string,
+): string {
+  const network = NETWORK_CONFIGS[chainId];
+  if (!network) return "";
+
+  const baseUrl = `${network.explorerUrl}/tx/${txHash}`;
+
+  // Solana devnet requires ?cluster=devnet query param
+  if (chainId === "Solana_Devnet") {
+    return `${baseUrl}?cluster=devnet`;
+  }
+
+  return baseUrl;
 }

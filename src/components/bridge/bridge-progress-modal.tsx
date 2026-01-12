@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import type { BridgeTransaction } from "~/lib/bridge/types";
-import { NETWORK_CONFIGS } from "~/lib/bridge/networks";
+import { NETWORK_CONFIGS, getExplorerTxUrl } from "~/lib/bridge/networks";
 
 interface BridgeProgressModalProps {
   isOpen: boolean;
@@ -251,7 +251,7 @@ export function BridgeProgressModal({
               {/* Transaction link */}
               {transaction.destinationTxHash && transaction.status === "completed" && (
                 <a
-                  href={`${toNetwork?.explorerUrl}/tx/${transaction.destinationTxHash}`}
+                  href={getExplorerTxUrl(transaction.toChain, transaction.destinationTxHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"

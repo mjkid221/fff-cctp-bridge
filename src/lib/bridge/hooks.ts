@@ -482,6 +482,9 @@ export interface WalletOption {
   };
 }
 
+// Re-export the full Wallet type for use in components that need it
+export type { Wallet } from "@dynamic-labs/wallet-connector-core";
+
 /**
  * Hook for managing source and destination wallet selection
  */
@@ -499,6 +502,9 @@ export function useWalletSelection(
   handleSelectDestWallet: (walletId: string) => void;
   hasCompatibleSourceWallet: boolean;
   hasCompatibleDestWallet: boolean;
+  // Full wallet objects for bridge service
+  selectedSourceWalletFull: ReturnType<typeof useUserWallets>[number] | undefined;
+  selectedDestWalletFull: ReturnType<typeof useUserWallets>[number] | undefined;
 } {
   const walletsByType = useWalletsByType();
   const { primaryWallet } = useDynamicContext();
@@ -597,5 +603,9 @@ export function useWalletSelection(
     // Compatibility checks
     hasCompatibleSourceWallet: sourceWallets.length > 0,
     hasCompatibleDestWallet: destWallets.length > 0,
+
+    // Full wallet objects for bridge service (needed for network switching)
+    selectedSourceWalletFull: selectedSourceWallet,
+    selectedDestWalletFull: selectedDestWallet,
   };
 }

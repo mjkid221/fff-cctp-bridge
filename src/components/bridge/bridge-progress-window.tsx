@@ -23,6 +23,7 @@ import {
   constrainToViewport,
   NETWORK_CONFIGS,
   parseStepError,
+  getExplorerTxUrl,
   type BridgeTransaction,
   type BridgeStep,
 } from "~/lib/bridge";
@@ -442,7 +443,10 @@ export function BridgeProgressWindow({
                               )}
                             </button>
                             <a
-                              href={`${step.id === "mint" ? toNetwork?.explorerUrl : fromNetwork?.explorerUrl}/tx/${step.txHash}`}
+                              href={getExplorerTxUrl(
+                                step.id === "mint" ? transaction.toChain : transaction.fromChain,
+                                step.txHash,
+                              )}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
@@ -463,7 +467,7 @@ export function BridgeProgressWindow({
             <div className="border-border/50 flex items-center justify-between border-t pt-4">
               {transaction.sourceTxHash && (
                 <a
-                  href={`${fromNetwork?.explorerUrl}/tx/${transaction.sourceTxHash}`}
+                  href={getExplorerTxUrl(transaction.fromChain, transaction.sourceTxHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs transition-colors"

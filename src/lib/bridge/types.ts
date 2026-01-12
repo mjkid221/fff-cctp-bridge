@@ -110,6 +110,10 @@ export interface BridgeParams {
   amount: string;
   token?: string;
   recipientAddress?: string;
+  /** Explicit source wallet for signing source chain transactions */
+  sourceWallet?: Wallet<WalletConnectorCore.WalletConnector>;
+  /** Explicit destination wallet for signing destination chain transactions */
+  destWallet?: Wallet<WalletConnectorCore.WalletConnector>;
 }
 
 /**

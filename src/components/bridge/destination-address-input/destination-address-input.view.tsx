@@ -1,61 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useState, useEffect } from "react";
 import { AlertCircle, CheckCircle2, Wallet } from "lucide-react";
 import { cn } from "~/lib/utils";
-import {
-  validateAddressForNetwork,
-  getAddressFormatDescription,
-} from "~/lib/bridge/address-validation";
-import type { NetworkType } from "~/lib/bridge/networks";
+import type { DestinationAddressInputViewProps } from "./destination-address-input.types";
 
-interface DestinationAddressInputProps {
-  networkType: NetworkType;
-  value: string;
-  onChange: (value: string) => void;
-  onValidationChange: (isValid: boolean) => void;
-  useCustomAddress: boolean;
-  onToggleCustomAddress: (useCustom: boolean) => void;
-  connectedWalletAddress?: string;
-}
-
-export function DestinationAddressInput({
-  networkType,
+export function DestinationAddressInputView({
   value,
   onChange,
-  onValidationChange,
-  useCustomAddress,
-  onToggleCustomAddress: _onToggleCustomAddress,
-  connectedWalletAddress: _connectedWalletAddress,
-}: DestinationAddressInputProps) {
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [isValid, setIsValid] = useState(false);
-
-  // Validate address whenever it changes
-  useEffect(() => {
-    if (!useCustomAddress) {
-      setValidationError(null);
-      setIsValid(true);
-      onValidationChange(true);
-      return;
-    }
-
-    if (!value || value.trim() === "") {
-      setValidationError(null);
-      setIsValid(false);
-      onValidationChange(false);
-      return;
-    }
-
-    const validation = validateAddressForNetwork(value, networkType);
-    setIsValid(validation.valid);
-    setValidationError(validation.error ?? null);
-    onValidationChange(validation.valid);
-  }, [value, networkType, useCustomAddress, onValidationChange]);
-
-  const formatDescription = getAddressFormatDescription(networkType);
-
+  validationError,
+  isValid,
+  formatDescription,
+}: DestinationAddressInputViewProps) {
   return (
     <div className="space-y-2">
       <div className="border-border/50 bg-card/50 hover:border-border hover:bg-card/80 relative flex h-[62px] items-center gap-3 rounded-xl border px-4 py-3 backdrop-blur-xl transition-all">

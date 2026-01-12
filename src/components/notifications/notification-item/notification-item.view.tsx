@@ -1,74 +1,17 @@
 "use client";
 
 import { motion } from "motion/react";
-import {
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  Info,
-  Loader2,
-  X,
-  ArrowRight,
-} from "lucide-react";
-import type { Notification } from "~/lib/notifications";
-import { useRemoveNotification, useMarkAsRead } from "~/lib/notifications";
+import { X, ArrowRight } from "lucide-react";
 import { cn } from "~/lib/utils";
+import type { NotificationItemViewProps } from "./notification-item.types";
 
-interface NotificationItemProps {
-  notification: Notification;
-  onAction?: (notification: Notification) => void;
-}
-
-function formatTimestamp(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-}
-
-function getStatusIcon(status: Notification["status"]) {
-  switch (status) {
-    case "success":
-      return <CheckCircle2 className="size-5 text-green-500" />;
-    case "failed":
-      return <AlertCircle className="size-5 text-red-500" />;
-    case "in_progress":
-      return (
-        <Loader2 className="size-5 animate-spin text-gray-600 dark:text-gray-400" />
-      );
-    case "pending":
-      return <Clock className="size-5 text-yellow-500" />;
-    case "info":
-    default:
-      return <Info className="size-5 text-gray-500" />;
-  }
-}
-
-export function NotificationItem({
+export function NotificationItemView({
   notification,
-  onAction,
-}: NotificationItemProps) {
-  const removeNotification = useRemoveNotification();
-  const markAsRead = useMarkAsRead();
-
-  const handleClick = () => {
-    markAsRead(notification.id);
-    if (onAction) {
-      onAction(notification);
-    }
-  };
-
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeNotification(notification.id);
-  };
-
+  formattedTimestamp,
+  statusIcon,
+  onItemClick,
+  onDismiss,
+}: NotificationItemViewProps) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 20, scale: 0.95 }}
@@ -81,7 +24,7 @@ export function NotificationItem({
         damping: 20,
         stiffness: 300,
       }}
-      onClick={handleClick}
+      onClick={onItemClick}
       className={cn(
         "group border-border/30 relative cursor-pointer overflow-hidden rounded-xl border p-4 backdrop-blur-xl transition-all",
         "hover:bg-muted/50 hover:border-border/50 hover:shadow-lg",
@@ -91,9 +34,7 @@ export function NotificationItem({
     >
       <div className="flex items-start gap-3">
         {/* Status Icon */}
-        <div className="mt-0.5 shrink-0">
-          {getStatusIcon(notification.status)}
-        </div>
+        <div className="mt-0.5 shrink-0">{statusIcon}</div>
 
         {/* Content */}
         <div className="min-w-0 flex-1">
@@ -105,11 +46,11 @@ export function NotificationItem({
             <div className="flex shrink-0 items-center gap-1.5">
               {/* Timestamp badge */}
               <span className="text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 text-[10px] font-medium">
-                {formatTimestamp(notification.timestamp)}
+                {formattedTimestamp}
               </span>
               {/* Dismiss button */}
               <button
-                onClick={handleDismiss}
+                onClick={onDismiss}
                 className="hover:bg-muted/50 rounded-full p-1 opacity-0 transition-all group-hover:opacity-100"
                 aria-label="Dismiss notification"
               >
@@ -126,9 +67,7 @@ export function NotificationItem({
           {/* Bridge transaction details */}
           {notification.fromChain && notification.toChain && (
             <div className="bg-muted/50 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium">
-              <span className="text-foreground">
-                {notification.fromChain}
-              </span>
+              <span className="text-foreground">{notification.fromChain}</span>
               <ArrowRight className="text-muted-foreground size-3" />
               <span className="text-foreground">{notification.toChain}</span>
               {notification.amount && (

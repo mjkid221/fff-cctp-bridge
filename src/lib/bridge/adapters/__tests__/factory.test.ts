@@ -130,6 +130,40 @@ describe("AdapterFactory", () => {
       expect(evmAdapter).not.toBe(solanaAdapter);
     });
 
+    it("should cache adapters separately for different chainIds", async () => {
+      // Import the mock to track calls
+      const { createSolanaAdapterFromProvider } = await import("@circle-fin/adapter-solana");
+      const mockCreate = createSolanaAdapterFromProvider as ReturnType<typeof vi.fn>;
+      mockCreate.mockClear();
+
+      const solanaWallet = createMockSolanaWallet("DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK");
+
+      // Get adapter for mainnet
+      await factory.getAdapter(
+        solanaWallet as unknown as Parameters<typeof factory.getAdapter>[0],
+        "solana",
+        "Solana"
+      );
+
+      // Get adapter for devnet - should create a NEW adapter (different cache key)
+      await factory.getAdapter(
+        solanaWallet as unknown as Parameters<typeof factory.getAdapter>[0],
+        "solana",
+        "Solana_Devnet"
+      );
+
+      // Both should be created (2 calls total) - proving different cache keys
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+
+      // Getting mainnet again should use cache (no additional call)
+      await factory.getAdapter(
+        solanaWallet as unknown as Parameters<typeof factory.getAdapter>[0],
+        "solana",
+        "Solana"
+      );
+      expect(mockCreate).toHaveBeenCalledTimes(2); // Still 2, not 3
+    });
+
     it("should throw error for unregistered network type", async () => {
       const wallet = createMockEVMWallet("0x123");
 

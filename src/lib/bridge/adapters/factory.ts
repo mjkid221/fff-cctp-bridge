@@ -12,9 +12,15 @@ import type {
   WalletConnectorCore,
 } from "@dynamic-labs/wallet-connector-core";
 import type { AdapterContext } from "@circle-fin/bridge-kit";
-import type { NetworkType } from "../networks";
+import { type NetworkType, NETWORK_CONFIGS, type SupportedChainId } from "../networks";
 import { DynamicSolanaWalletAdapter } from "~/lib/solana/provider";
 import { Connection } from "@solana/web3.js";
+
+// Solana RPC endpoints (from Circle's adapter defaults)
+const SOLANA_RPC_ENDPOINTS = {
+  mainnet: "https://solana-mainnet.public.blastapi.io",
+  testnet: "https://api.devnet.solana.com",
+} as const;
 
 // Use the adapter type from Circle's bridge-kit
 type BridgeAdapter = AdapterContext["adapter"];
@@ -28,6 +34,7 @@ export interface IAdapterCreator {
   canHandle(wallet: Wallet<WalletConnectorCore.WalletConnector>): boolean;
   createAdapter(
     wallet: Wallet<WalletConnectorCore.WalletConnector>,
+    chainId?: SupportedChainId,
   ): Promise<BridgeAdapter>;
 }
 
@@ -42,8 +49,34 @@ export class EVMAdapterCreator implements IAdapterCreator {
     return isEthereumWallet(wallet);
   }
 
+  /**
+   * Switch EVM wallet to target network before creating adapter
+   * This is critical for cross-chain bridges where the destination chain
+   * may be different from the wallet's current network
+   */
+  static async switchNetwork(
+    wallet: Wallet<WalletConnectorCore.WalletConnector>,
+    targetChainId: number,
+  ): Promise<void> {
+    if (!isEthereumWallet(wallet)) {
+      console.warn("[EVMAdapter] Cannot switch network: wallet is not an EVM wallet");
+      return;
+    }
+
+    try {
+      console.log(`[EVMAdapter] Switching to chain ${targetChainId}...`);
+      await wallet.switchNetwork(targetChainId);
+      console.log(`[EVMAdapter] Successfully switched to chain ${targetChainId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[EVMAdapter] Failed to switch network:`, error);
+      throw new Error(`Failed to switch to chain ${targetChainId}: ${message}`);
+    }
+  }
+
   async createAdapter(
     wallet: Wallet<WalletConnectorCore.WalletConnector>,
+    _chainId?: SupportedChainId,
   ): Promise<BridgeAdapter> {
     if (!isEthereumWallet(wallet)) {
       throw new Error("Wallet is not an Ethereum wallet");
@@ -79,16 +112,35 @@ export class SolanaAdapterCreator implements IAdapterCreator {
 
   async createAdapter(
     wallet: Wallet<WalletConnectorCore.WalletConnector>,
+    chainId?: SupportedChainId,
   ): Promise<BridgeAdapter> {
     if (!isSolanaWallet(wallet)) {
       throw new Error("Wallet is not a Solana wallet");
     }
+
     // Create wrapper for Solana Wallet Provider class (for Dynamic)
     const solanaProvider = new DynamicSolanaWalletAdapter(wallet);
 
-    const connection = new Connection(
-      (await wallet.getConnection()).rpcEndpoint,
-    );
+    // Determine RPC endpoint based on chain environment
+    let rpcEndpoint: string;
+    if (chainId) {
+      const network = NETWORK_CONFIGS[chainId];
+      rpcEndpoint =
+        network?.environment === "mainnet"
+          ? SOLANA_RPC_ENDPOINTS.mainnet
+          : SOLANA_RPC_ENDPOINTS.testnet;
+      console.log(
+        `[SolanaAdapter] Using ${network?.environment} RPC for chain ${chainId}: ${rpcEndpoint}`,
+      );
+    } else {
+      // Fallback to wallet's current RPC if no chain specified
+      rpcEndpoint = (await wallet.getConnection()).rpcEndpoint;
+      console.log(
+        `[SolanaAdapter] Using wallet RPC (no chain specified): ${rpcEndpoint}`,
+      );
+    }
+
+    const connection = new Connection(rpcEndpoint);
 
     // Create Solana adapter using Circle's factory
     return await createSolanaAdapter({
@@ -130,13 +182,20 @@ export class AdapterFactory {
 
   /**
    * Get or create an adapter for the given wallet and network type
+   * @param wallet - The wallet to create an adapter for
+   * @param networkType - The network type (evm, solana, etc.)
+   * @param chainId - Optional chain ID for environment-specific RPC selection
    */
   async getAdapter(
     wallet: Wallet<WalletConnectorCore.WalletConnector>,
     networkType: NetworkType,
+    chainId?: SupportedChainId,
   ): Promise<BridgeAdapter> {
-    // Check cache first
-    const cacheKey = `${wallet.address}-${networkType}`;
+    // Include chainId in cache key for environment differentiation
+    const cacheKey = chainId
+      ? `${wallet.address}-${networkType}-${chainId}`
+      : `${wallet.address}-${networkType}`;
+
     const cached = this.adapterCache.get(cacheKey);
     if (cached) {
       return cached;
@@ -155,8 +214,8 @@ export class AdapterFactory {
       );
     }
 
-    // Create and cache the adapter
-    const adapter = await creator.createAdapter(wallet);
+    // Create and cache the adapter (pass chainId for environment-based RPC)
+    const adapter = await creator.createAdapter(wallet, chainId);
     this.adapterCache.set(cacheKey, adapter);
 
     return adapter;

@@ -15,5 +15,6 @@ export { ProgressIndicator } from "./progress-indicator";
 export { RecentTransactions } from "./recent-transactions";
 export { ThemeTransition } from "./theme-transition";
 export { WalletSelector } from "./wallet-selector";
+export { TransactionWindows } from "./transaction-windows";
 export type { TransactionStatus } from "./transaction-status";
 export type { NotificationType } from "./notification";

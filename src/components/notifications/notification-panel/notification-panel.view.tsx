@@ -2,80 +2,20 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { Bell } from "lucide-react";
-import {
-  useNotifications,
-  useIsNotificationPanelOpen,
-  useSetNotificationPanelOpen,
-  useClearAllNotifications,
-  type Notification,
-} from "~/lib/notifications";
-import { NotificationItem } from "./notification-item";
+import { NotificationItem } from "../notification-item";
 import { Button } from "~/components/ui/button";
-import { useEffect, useRef } from "react";
-import { BridgeStorage } from "~/lib/bridge/storage";
-import { useBridgeStore } from "~/lib/bridge";
 import { WindowPortal } from "~/components/ui/window-portal";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import type { NotificationPanelViewProps } from "./notification-panel.types";
 
-interface NotificationPanelProps {
-  onNotificationAction?: (notification: Notification) => void;
-}
-
-export function NotificationPanel({ onNotificationAction }: NotificationPanelProps) {
-  const notifications = useNotifications();
-  const isOpen = useIsNotificationPanelOpen();
-  const setIsOpen = useSetNotificationPanelOpen();
-  const clearAll = useClearAllNotifications();
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Close panel when clicking outside
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-
-      // Don't close if clicking the notification bell button
-      if (target.closest('[data-notification-bell="true"]')) {
-        return;
-      }
-
-      if (panelRef.current && !panelRef.current.contains(target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, setIsOpen]);
-
-  const handleNotificationClick = async (notification: Notification) => {
-    // If it's a bridge notification with a transaction ID, open transaction window
-    if (notification.bridgeTransactionId) {
-      // Skip temporary pending IDs (created before real transaction exists)
-      if (!notification.bridgeTransactionId.startsWith("pending_")) {
-        // Load transaction from IndexedDB
-        const transaction = await BridgeStorage.getTransaction(
-          notification.bridgeTransactionId
-        );
-
-        if (transaction) {
-          // Open a new transaction window (or focus existing one)
-          useBridgeStore.getState().openTransactionWindow(transaction);
-        }
-      }
-
-      // Close notification panel
-      setIsOpen(false);
-    }
-
-    onNotificationAction?.(notification);
-  };
-
-  const handleClearAll = () => {
-    clearAll();
-  };
-
+export function NotificationPanelView({
+  isOpen,
+  panelRef,
+  notifications,
+  onClose,
+  onNotificationClick,
+  onClearAll,
+}: NotificationPanelViewProps) {
   return (
     <WindowPortal>
       <AnimatePresence>
@@ -88,7 +28,7 @@ export function NotificationPanel({ onNotificationAction }: NotificationPanelPro
               exit={{ opacity: 0 }}
               className="fixed inset-0"
               style={{ zIndex: 199 }}
-              onClick={() => setIsOpen(false)}
+              onClick={onClose}
             />
 
             {/* Panel */}
@@ -106,16 +46,16 @@ export function NotificationPanel({ onNotificationAction }: NotificationPanelPro
               style={{ zIndex: 200 }}
             >
               {/* Theme-aware glassmorphic container */}
-              <div className="overflow-hidden rounded-xl bg-card/95 backdrop-blur-2xl shadow-2xl border border-border/50">
+              <div className="border-border/50 bg-card/95 overflow-hidden rounded-xl border shadow-2xl backdrop-blur-2xl">
                 {/* Header */}
-                <div className="border-b border-border/30 px-4 py-3 bg-muted/40">
+                <div className="border-border/30 bg-muted/40 border-b px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-foreground">
+                      <h3 className="text-foreground text-sm font-medium">
                         Notifications
                       </h3>
                       {notifications.length > 0 && (
-                        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                        <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
                           {notifications.length}
                         </span>
                       )}
@@ -126,8 +66,8 @@ export function NotificationPanel({ onNotificationAction }: NotificationPanelPro
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleClearAll}
-                        className="h-7 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        onClick={onClearAll}
+                        className="text-muted-foreground hover:bg-muted/50 hover:text-foreground h-7 gap-1.5 px-2 text-xs font-medium"
                       >
                         Clear all
                       </Button>
@@ -139,14 +79,14 @@ export function NotificationPanel({ onNotificationAction }: NotificationPanelPro
                 <ScrollArea className="macos-window-scrollbar max-h-[32rem]">
                   {notifications.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-3 py-12">
-                      <div className="flex size-16 items-center justify-center rounded-full bg-muted/30">
-                        <Bell className="size-8 text-muted-foreground/50" />
+                      <div className="bg-muted/30 flex size-16 items-center justify-center rounded-full">
+                        <Bell className="text-muted-foreground/50 size-8" />
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-foreground text-sm font-medium">
                           No notifications
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           You&apos;re all caught up!
                         </p>
                       </div>
@@ -162,7 +102,7 @@ export function NotificationPanel({ onNotificationAction }: NotificationPanelPro
                         >
                           <NotificationItem
                             notification={notification}
-                            onAction={handleNotificationClick}
+                            onAction={onNotificationClick}
                           />
                         </motion.div>
                       ))}

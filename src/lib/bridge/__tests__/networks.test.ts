@@ -3,6 +3,7 @@ import {
   NETWORK_CONFIGS,
   getNetworksByEnvironment,
   isRouteSupported,
+  getExplorerTxUrl,
 } from "../networks";
 import type { SupportedChainId } from "../networks";
 
@@ -154,6 +155,56 @@ describe("Network Configuration", () => {
         expect(isRouteSupported("InvalidChain" as SupportedChainId, "Ethereum")).toBe(false);
         expect(isRouteSupported("Ethereum", "InvalidChain" as SupportedChainId)).toBe(false);
       });
+    });
+  });
+
+  describe("getExplorerTxUrl", () => {
+    it("should return correct explorer URL for EVM mainnet chains", () => {
+      const txHash = "0x1234567890abcdef";
+
+      expect(getExplorerTxUrl("Ethereum", txHash)).toBe(
+        `https://etherscan.io/tx/${txHash}`
+      );
+      expect(getExplorerTxUrl("Base", txHash)).toBe(
+        `https://basescan.org/tx/${txHash}`
+      );
+      expect(getExplorerTxUrl("Arbitrum", txHash)).toBe(
+        `https://arbiscan.io/tx/${txHash}`
+      );
+    });
+
+    it("should return correct explorer URL for EVM testnet chains", () => {
+      const txHash = "0xabcdef1234567890";
+
+      expect(getExplorerTxUrl("Ethereum_Sepolia", txHash)).toBe(
+        `https://sepolia.etherscan.io/tx/${txHash}`
+      );
+      expect(getExplorerTxUrl("Base_Sepolia", txHash)).toBe(
+        `https://sepolia.basescan.org/tx/${txHash}`
+      );
+      expect(getExplorerTxUrl("Arbitrum_Sepolia", txHash)).toBe(
+        `https://sepolia.arbiscan.io/tx/${txHash}`
+      );
+    });
+
+    it("should return correct explorer URL for Solana mainnet", () => {
+      const txHash = "5xYz...abc";
+
+      expect(getExplorerTxUrl("Solana", txHash)).toBe(
+        `https://solscan.io/tx/${txHash}`
+      );
+    });
+
+    it("should append ?cluster=devnet for Solana devnet", () => {
+      const txHash = "3abc...xyz";
+
+      expect(getExplorerTxUrl("Solana_Devnet", txHash)).toBe(
+        `https://solscan.io/tx/${txHash}?cluster=devnet`
+      );
+    });
+
+    it("should return empty string for invalid chain ID", () => {
+      expect(getExplorerTxUrl("InvalidChain" as SupportedChainId, "0x123")).toBe("");
     });
   });
 });
