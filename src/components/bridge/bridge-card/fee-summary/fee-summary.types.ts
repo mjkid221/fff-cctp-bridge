@@ -24,7 +24,6 @@ export interface FeeSummaryViewProps {
   initialPosition: { x: number; y: number };
   isMinimized: boolean;
   isMaximized: boolean;
-  isActive: boolean;
   zIndex: string;
   onDragStart: () => void;
   onDragEnd: () => void;

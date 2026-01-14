@@ -11,6 +11,7 @@ import {
   Check,
   ExternalLink,
   ArrowRight,
+  X,
 } from "lucide-react";
 import { parseStepError, getExplorerTxUrl } from "~/lib/bridge";
 import { Button } from "~/components/ui/button";
@@ -33,10 +34,10 @@ export function TransactionWindowView({
   isCompleted,
   isFailed,
   isInProgress,
+  isCancelled,
   fromNetworkDisplayName,
   toNetworkDisplayName,
-  fromNetworkExplorerUrl,
-  toNetworkExplorerUrl,
+
   onDragStart,
   onDragEnd,
   onClose,
@@ -45,6 +46,7 @@ export function TransactionWindowView({
   onMaximize,
   onCopyToClipboard,
   onRetryStep,
+  onDismiss,
   dragControls,
 }: TransactionWindowViewProps) {
   return (
@@ -207,6 +209,7 @@ export function TransactionWindowView({
                     isCompleted && "border-green-500/30 bg-green-500/10",
                     isFailed && "border-red-500/30 bg-red-500/10",
                     isInProgress && "border-border/50 bg-muted/30",
+                    isCancelled && "border-gray-500/30 bg-gray-500/10",
                   )}
                 >
                   <div className="relative z-10 flex items-center gap-2.5">
@@ -245,12 +248,36 @@ export function TransactionWindowView({
                         <div className="flex size-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50">
                           <Loader2 className="size-5 animate-spin text-gray-600 dark:text-gray-300" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                             Transfer In Progress
                           </p>
                           <p className="text-[10px] text-gray-600/80 dark:text-gray-400/80">
                             Please wait while we process your transfer
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={onDismiss}
+                          className="h-7 gap-1 rounded-full bg-gray-100 px-2.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          <X className="size-3" />
+                          Dismiss
+                        </Button>
+                      </>
+                    )}
+                    {isCancelled && (
+                      <>
+                        <div className="flex size-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700/50">
+                          <X className="size-5 text-gray-600 dark:text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            Transfer Cancelled
+                          </p>
+                          <p className="text-[10px] text-gray-600/80 dark:text-gray-400/80">
+                            This transfer was dismissed by user
                           </p>
                         </div>
                       </>

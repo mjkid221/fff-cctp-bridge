@@ -193,10 +193,3 @@ export function parseStepError(stepName: string, error: unknown): string {
 function capitalizeFirst(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
-/**
- * Check if error indicates user rejection
- */
-export function isUserRejectionError(error: unknown): boolean {
-  return parseTransactionError(error).isUserRejection;
-}

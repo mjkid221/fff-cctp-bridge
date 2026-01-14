@@ -25,6 +25,7 @@ export interface TransactionWindowViewProps {
   isCompleted: boolean;
   isFailed: boolean;
   isInProgress: boolean;
+  isCancelled: boolean;
   fromNetworkDisplayName: string;
   toNetworkDisplayName: string;
   fromNetworkExplorerUrl: string;
@@ -37,6 +38,7 @@ export interface TransactionWindowViewProps {
   onMaximize: () => void;
   onCopyToClipboard: (text: string) => Promise<void>;
   onRetryStep: () => Promise<void>;
+  onDismiss: () => Promise<void>;
   dragControls: DragControls;
 }
 

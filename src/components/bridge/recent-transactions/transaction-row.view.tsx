@@ -7,6 +7,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { NETWORK_CONFIGS } from "~/lib/bridge";
@@ -23,6 +24,7 @@ export function TransactionRow({
   const isPending = tx.status === "pending" || tx.status === "bridging";
   const isFailed = tx.status === "failed";
   const isCompleted = tx.status === "completed";
+  const isCancelled = tx.status === "cancelled";
 
   return (
     <motion.div
@@ -45,6 +47,7 @@ export function TransactionRow({
               isCompleted && "bg-green-500/10",
               isPending && "bg-blue-500/10",
               isFailed && "bg-red-500/10",
+              isCancelled && "bg-gray-500/10",
             )}
           >
             {isCompleted && <CheckCircle2 className="size-5 text-green-500" />}
@@ -52,6 +55,7 @@ export function TransactionRow({
               <Clock className="size-5 animate-pulse text-blue-500" />
             )}
             {isFailed && <AlertCircle className="size-5 text-red-500" />}
+            {isCancelled && <X className="size-5 text-gray-500" />}
           </div>
 
           {/* Transaction Details */}
@@ -77,11 +81,13 @@ export function TransactionRow({
               isCompleted && "bg-green-500/10 text-green-500",
               isPending && "bg-blue-500/10 text-blue-500",
               isFailed && "bg-red-500/10 text-red-500",
+              isCancelled && "bg-gray-500/10 text-gray-500",
             )}
           >
             {isCompleted && "Completed"}
             {isPending && "In Progress"}
             {isFailed && "Failed"}
+            {isCancelled && "Cancelled"}
           </span>
           <ExternalLink className="text-muted-foreground size-4 opacity-0 transition-opacity group-hover:opacity-100" />
         </div>

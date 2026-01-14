@@ -13,7 +13,12 @@ import { isSolanaWallet } from "@dynamic-labs/solana";
 import { isSuiWallet } from "@dynamic-labs/sui";
 import { getBridgeService } from "./service";
 import { useBridgeStore } from "./store";
-import type { BridgeParams, BridgeEstimate, BridgeTransaction } from "./types";
+import type {
+  BridgeParams,
+  BridgeEstimate,
+  BridgeTransaction,
+  WalletOption,
+} from "./types";
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
 import { bridgeKeys } from "./query-keys";
@@ -53,7 +58,6 @@ export function useBridgeInit() {
       if (primaryWallet?.address) {
         const service = getBridgeService();
 
-        // Pass the primary wallet and all connected wallets to the service
         await service.initialize(primaryWallet, allWallets);
         setUserAddress(primaryWallet.address);
         await loadTransactions();
@@ -76,7 +80,6 @@ export function useBridgeInit() {
       const service = getBridgeService();
       const transactions = await service.getTransactions();
 
-      // Find the most recent in-progress transaction
       const inProgressTx = transactions
         .filter(
           (tx) =>
@@ -89,20 +92,15 @@ export function useBridgeInit() {
         .sort((a, b) => b.createdAt - a.createdAt)[0];
 
       if (inProgressTx) {
-        // Mark as auto-loaded to prevent running again
         hasAutoLoadedRef.current = true;
 
         const setCurrentTransaction =
           useBridgeStore.getState().setCurrentTransaction;
         const setActiveWindow = useBridgeStore.getState().setActiveWindow;
 
-        // Set as current transaction and show progress window
         setCurrentTransaction(inProgressTx);
         setActiveWindow("bridge-progress");
-
-        // No polling needed - event manager handles real-time updates
       } else {
-        // No in-progress transaction found, mark as checked
         hasAutoLoadedRef.current = true;
       }
     };
@@ -165,11 +163,9 @@ export function useBridge() {
         const service = getBridgeService();
         const transaction = await service.bridge(params);
 
-        // Add to store and set as current
         addTransaction(transaction);
         setCurrentTransaction(transaction);
 
-        // Invalidate balance caches for both chains after bridge
         void queryClient.invalidateQueries({
           queryKey: bridgeKeys.balance(params.fromChain, userAddress),
         });
@@ -210,7 +206,6 @@ export function useRetryBridge() {
         const service = getBridgeService();
         const transaction = await service.retry(transactionId);
 
-        // Add new transaction to store
         addTransaction(transaction);
 
         return transaction;
@@ -227,41 +222,6 @@ export function useRetryBridge() {
   );
 
   return { retryBridge, isRetrying, error };
-}
-
-/**
- * Hook for checking route support
- */
-export function useRouteSupport(
-  from: SupportedChainId | null,
-  to: SupportedChainId | null,
-) {
-  const [isSupported, setIsSupported] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
-
-  useEffect(() => {
-    const checkSupport = async () => {
-      if (!from || !to) {
-        setIsSupported(false);
-        return;
-      }
-
-      setIsChecking(true);
-      try {
-        const service = getBridgeService();
-        const supported = await service.supportsRoute(from, to);
-        setIsSupported(supported);
-      } catch {
-        setIsSupported(false);
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    void checkSupport();
-  }, [from, to]);
-
-  return { isSupported, isChecking };
 }
 
 /**
@@ -341,23 +301,15 @@ export function useNetworkAutoSwitch() {
       // Get the first available Solana wallet
       const solanaWallet = solanaWallets[0];
 
-      if (!solanaWallet) {
-        console.warn("No Solana wallet connected for network switch");
-        return;
-      }
+      if (!solanaWallet) return;
 
       try {
         setIsSwitching(true);
         setSwitchError(null);
 
-        // Get current network - solanaWallet is properly typed as SolanaWallet
         const currentConnection = await solanaWallet.getConnection();
         const currentRpc: string = currentConnection.rpcEndpoint;
 
-        console.log("[Network Switch] Current RPC:", currentRpc);
-        console.log("[Network Switch] Target chain:", fromChain);
-
-        // Check if we need to switch
         const isMainnet = currentRpc.includes("mainnet");
         const isDevnet = currentRpc.includes("devnet");
 
@@ -365,32 +317,15 @@ export function useNetworkAutoSwitch() {
           (network.environment === "mainnet" && !isMainnet) ||
           (network.environment === "testnet" && !isDevnet);
 
-        if (!needsSwitch) {
-          console.log("[Network Switch] Already on correct network");
-          return;
-        }
+        if (!needsSwitch) return;
 
-        console.log(
-          `[Network Switch] Switching to ${fromChain} (environment: ${network.environment})`,
-        );
-
-        // Switch network using Dynamic's API
-        // SolanaWallet has switchNetwork method that takes chainId as string/number
         if (typeof solanaWallet.switchNetwork === "function") {
           await solanaWallet.switchNetwork(network.dynamicChainId || fromChain);
-          console.log("[Network Switch] Successfully switched to:", fromChain);
-
-          // Small delay to let network switch propagate
           await new Promise((resolve) => setTimeout(resolve, 500));
-        } else {
-          console.warn(
-            "[Network Switch] Wallet does not support switchNetwork",
-          );
         }
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("[Network Switch] Failed to switch network:", message);
         setSwitchError(message);
       } finally {
         setIsSwitching(false);
@@ -435,21 +370,7 @@ export function useWalletForNetwork(
   }, [walletsByType, networkType]);
 
   const promptWalletConnection = useCallback(
-    (chainName?: string) => {
-      // Log for better UX feedback
-      if (chainName && networkType) {
-        console.log(
-          `Prompting user to connect ${networkType.toUpperCase()} wallet for ${chainName}`,
-        );
-      }
-
-      // Set the tab index based on network type before opening modal
-      // Tab indices from dynamic-provider.tsx:
-      // 0: All chains
-      // 1: Ethereum (EVM)
-      // 2: Solana
-      // 3: Arbitrum (EVM)
-      // 4: SUI
+    (_chainName?: string) => {
       let tabIndex = 0;
       if (networkType === "evm") {
         tabIndex = 1; // Ethereum tab
@@ -469,15 +390,6 @@ export function useWalletForNetwork(
     compatibleWallet,
     hasCompatibleWallet: !!compatibleWallet,
     promptWalletConnection,
-  };
-}
-
-export interface WalletOption {
-  id: string;
-  address: string;
-  connector: {
-    key: string;
-    name?: string;
   };
 }
 

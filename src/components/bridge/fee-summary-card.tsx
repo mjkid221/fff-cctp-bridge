@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Clock, ArrowRight, Zap } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 import type { BridgeEstimate, TransferMethod } from "~/lib/bridge/types";
 import { getAttestationTimeDisplay } from "~/lib/bridge/attestation-times";
 import type { SupportedChainId } from "~/lib/bridge/networks";
@@ -56,30 +56,6 @@ export function FeeSummaryCard({
 
   return (
     <div className="space-y-3 p-4">
-      {/* Transfer Method Badge */}
-      <div className="flex items-center justify-between">
-        <div
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium",
-            isFast
-              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-              : "bg-green-500/10 text-green-600 dark:text-green-400",
-          )}
-        >
-          {isFast ? (
-            <>
-              <Zap className="size-3" />
-              <span>Fast Transfer</span>
-            </>
-          ) : (
-            <>
-              <Clock className="size-3" />
-              <span>Standard Transfer</span>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Route & Amount */}
       <div className="border-border/30 bg-muted/20 rounded-lg border px-3 py-2">
         <div className="flex items-center justify-between gap-2">
@@ -104,7 +80,9 @@ export function FeeSummaryCard({
           <Skeleton className="h-3 w-16" />
         ) : (
           <span className="text-foreground font-medium">
-            {fromChain ? getAttestationTimeDisplay(fromChain) : "~13 min"}
+            {fromChain
+              ? getAttestationTimeDisplay(fromChain, isFast)
+              : "~13 min"}
           </span>
         )}
       </div>

@@ -46,7 +46,6 @@ export function BridgeCardView({
   isValidAmount,
   useCustomAddress,
   customAddress,
-  isAddressValid: _isAddressValid,
   onUseCustomAddressChange,
   onCustomAddressChange,
   onAddressValidationChange,
@@ -58,6 +57,7 @@ export function BridgeCardView({
   bridgeError,
   isBridging,
   canBridge,
+  needsSourceWallet,
   needsDestinationWallet,
   needsWalletForMinting,
   destNetworkName,
@@ -282,42 +282,45 @@ export function BridgeCardView({
               </AnimatePresence>
 
               {/* Destination Wallet Warning */}
-              {needsDestinationWallet && toChain && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  className="bg-muted/30 overflow-hidden rounded-xl p-1 backdrop-blur-xl"
-                >
-                  <div className="bg-card/80 border-border/50 flex items-center gap-3 rounded-lg border p-3 shadow-sm">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
-                      <AlertCircle className="size-4 text-blue-500" />
+              <AnimatePresence>
+                {needsDestinationWallet && toChain && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    className="bg-muted/30 overflow-hidden rounded-xl p-1 backdrop-blur-xl"
+                  >
+                    <div className="bg-card/80 border-border/50 flex items-center gap-3 rounded-lg border p-3 shadow-sm">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                        <AlertCircle className="size-4 text-blue-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground text-sm font-medium">
+                          Connect{" "}
+                          {NETWORK_CONFIGS[toChain]?.type === "evm"
+                            ? "EVM"
+                            : "Solana"}{" "}
+                          wallet
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                          Required to receive USDC on{" "}
+                          {NETWORK_CONFIGS[toChain]?.name}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() =>
+                          onPromptDestWallet(NETWORK_CONFIGS[toChain]?.name)
+                        }
+                        size="sm"
+                        className="h-8 shrink-0 border-0 bg-blue-500/10 px-3 text-xs font-medium text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                      >
+                        Connect
+                      </Button>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-foreground text-sm font-medium">
-                        Connect{" "}
-                        {NETWORK_CONFIGS[toChain]?.type === "evm"
-                          ? "EVM"
-                          : "Solana"}{" "}
-                        wallet
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
-                        Required to receive USDC on{" "}
-                        {NETWORK_CONFIGS[toChain]?.name}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() =>
-                        onPromptDestWallet(NETWORK_CONFIGS[toChain]?.name)
-                      }
-                      size="sm"
-                      className="h-8 shrink-0 border-0 bg-blue-500/10 px-3 text-xs font-medium text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
-                    >
-                      Connect
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Simple Fee Summary */}
               <motion.div
@@ -416,6 +419,8 @@ export function BridgeCardView({
                   <span>Connect Wallet</span>
                 ) : !fromChain || !toChain ? (
                   <span>Select Networks</span>
+                ) : needsSourceWallet ? (
+                  <span>Select Source Wallet</span>
                 ) : needsDestinationWallet ? (
                   <span>Select Destination Wallet</span>
                 ) : needsWalletForMinting ? (

@@ -1,13 +1,7 @@
 import type { NetworkType } from "~/lib/bridge/networks";
+import type { WalletOption } from "~/lib/bridge";
 
-export interface WalletOption {
-  id: string;
-  address: string;
-  connector: {
-    key: string;
-    name?: string;
-  };
-}
+export type { WalletOption };
 
 export interface WalletSelectorProps {
   wallets: WalletOption[];

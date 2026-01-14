@@ -164,8 +164,8 @@ export function BridgeProgressWindow({
       await navigator.clipboard.writeText(text);
       setCopiedHash(text);
       setTimeout(() => setCopiedHash(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } catch {
+      // Clipboard API may fail silently
     }
   };
 

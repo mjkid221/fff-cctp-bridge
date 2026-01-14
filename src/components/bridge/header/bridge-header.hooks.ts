@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useEnvironment } from "~/lib/bridge";
+import { useCCTPExplainer } from "../cctp-explainer";
 
 export function useHeaderState() {
   const {
@@ -17,6 +18,13 @@ export function useHeaderState() {
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showPongGame, setShowPongGame] = useState(false);
+
+  // CCTP Explainer (managed via store)
+  const {
+    isOpen: showExplainer,
+    onClose: handleCloseExplainer,
+    onOpen: handleOpenExplainer,
+  } = useCCTPExplainer();
 
   const isConnected = !!primaryWallet;
   const walletAddress = primaryWallet?.address ?? null;
@@ -83,6 +91,7 @@ export function useHeaderState() {
     showTransactionHistory,
     showDisclaimer,
     showPongGame,
+    showExplainer,
 
     // Environment
     environment,
@@ -98,8 +107,10 @@ export function useHeaderState() {
     onCloseTransactionHistory: handleCloseTransactionHistory,
     onCloseDisclaimer: handleCloseDisclaimer,
     onClosePongGame: handleClosePongGame,
+    onCloseExplainer: handleCloseExplainer,
     onOpenTransactionHistory: handleOpenTransactionHistory,
     onOpenDisclaimer: handleOpenDisclaimer,
     onOpenPongGame: handleOpenPongGame,
+    onOpenExplainer: handleOpenExplainer,
   };
 }

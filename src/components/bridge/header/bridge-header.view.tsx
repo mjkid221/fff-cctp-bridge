@@ -11,6 +11,7 @@ import {
   Twitter,
   FileText,
   Gamepad2,
+  HelpCircle,
 } from "lucide-react";
 import { DynamicEmbeddedWidget } from "@dynamic-labs/sdk-react-core";
 import { Button } from "~/components/ui/button";
@@ -39,6 +40,7 @@ import {
   MobileDisclaimerDrawer,
 } from "./disclaimer";
 import { DraggablePongWindow, MobilePongDrawer } from "./pong";
+import { CCTPExplainerView } from "../cctp-explainer";
 
 export interface BridgeHeaderViewProps {
   // Wallet state
@@ -50,6 +52,7 @@ export interface BridgeHeaderViewProps {
   showTransactionHistory: boolean;
   showDisclaimer: boolean;
   showPongGame: boolean;
+  showExplainer: boolean;
 
   // Environment
   environment: "mainnet" | "testnet";
@@ -65,9 +68,11 @@ export interface BridgeHeaderViewProps {
   onCloseTransactionHistory: () => void;
   onCloseDisclaimer: () => void;
   onClosePongGame: () => void;
+  onCloseExplainer: () => void;
   onOpenTransactionHistory: () => void;
   onOpenDisclaimer: () => void;
   onOpenPongGame: () => void;
+  onOpenExplainer: () => void;
 }
 
 export function BridgeHeaderView({
@@ -77,6 +82,7 @@ export function BridgeHeaderView({
   showTransactionHistory,
   showDisclaimer,
   showPongGame,
+  showExplainer,
   environment,
   onConnectWallet,
   onManageWallets,
@@ -88,9 +94,11 @@ export function BridgeHeaderView({
   onCloseTransactionHistory,
   onCloseDisclaimer,
   onClosePongGame,
+  onCloseExplainer,
   onOpenTransactionHistory,
   onOpenDisclaimer,
   onOpenPongGame,
+  onOpenExplainer,
 }: BridgeHeaderViewProps) {
   return (
     <>
@@ -259,6 +267,13 @@ export function BridgeHeaderView({
                       >
                         <FileText className="mr-2 size-4" />
                         <span className="text-sm">CCTP Documentation</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={onOpenExplainer}
+                        className="text-foreground hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
+                      >
+                        <HelpCircle className="mr-2 size-4" />
+                        <span className="text-sm">How CCTP Works</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -472,6 +487,9 @@ export function BridgeHeaderView({
           </>
         )}
       </AnimatePresence>
+
+      {/* CCTP Explainer Modal */}
+      <CCTPExplainerView isOpen={showExplainer} onClose={onCloseExplainer} />
 
       {/* Command Palette (cmd+k) */}
       <CommandPalette

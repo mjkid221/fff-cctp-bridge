@@ -1,14 +1,9 @@
-import type { BridgeEstimate, TransferMethod } from "~/lib/bridge/types";
+import type {
+  BridgeEstimate,
+  TransferMethod,
+  WalletOption,
+} from "~/lib/bridge/types";
 import type { SupportedChainId, NetworkType } from "~/lib/bridge/networks";
-
-export interface WalletOption {
-  id: string;
-  address: string;
-  connector: {
-    key: string;
-    name?: string;
-  };
-}
 
 export interface BridgeCardViewProps {
   // Initialization state
@@ -45,7 +40,6 @@ export interface BridgeCardViewProps {
   // Custom address
   useCustomAddress: boolean;
   customAddress: string;
-  isAddressValid: boolean;
   onUseCustomAddressChange: (useCustom: boolean) => void;
   onCustomAddressChange: (address: string) => void;
   onAddressValidationChange: (valid: boolean) => void;
@@ -61,6 +55,7 @@ export interface BridgeCardViewProps {
   bridgeError: string | null;
   isBridging: boolean;
   canBridge: boolean;
+  needsSourceWallet: boolean;
   needsDestinationWallet: boolean;
   needsWalletForMinting: boolean;
   destNetworkName: string | undefined;

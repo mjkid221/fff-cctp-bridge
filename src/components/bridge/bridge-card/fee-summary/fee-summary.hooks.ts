@@ -122,7 +122,6 @@ export function useFeeSummaryState({ onClose }: FeeSummaryProps) {
     initialPosition,
     isMinimized,
     isMaximized,
-    isActive,
     zIndex,
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,

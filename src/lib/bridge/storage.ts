@@ -104,7 +104,6 @@ export class BridgeStorage {
       userAddress,
     );
 
-    // Sort by createdAt descending and limit
     return allTxs.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
   }
 

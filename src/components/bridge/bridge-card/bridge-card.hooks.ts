@@ -226,8 +226,6 @@ export function useBridgeCardState() {
         }
       }
     } catch (error: unknown) {
-      console.error("Bridge failed:", error);
-
       const parsed = parseTransactionError(error);
 
       if (notificationId) {
@@ -264,21 +262,24 @@ export function useBridgeCardState() {
 
   const isValidAmount = Boolean(amount && parseFloat(amount) > 0);
 
-  // When using custom address, user still needs a wallet of the destination chain type
-  // to sign the mint transaction (even though funds go to custom recipient)
+  const needsSourceWallet = Boolean(
+    fromChain && !selectedSourceWalletId,
+  );
+
   const canBridge = Boolean(
     isInitialized &&
     fromChain &&
     toChain &&
     isValidAmount &&
     !isBridging &&
+    selectedSourceWalletId &&
     (useCustomAddress
       ? isAddressValid && hasWalletForDestNetwork
-      : hasDestWallet),
+      : hasDestWallet && selectedDestWalletId),
   );
 
   const needsDestinationWallet = Boolean(
-    toChain && !hasDestWallet && !useCustomAddress,
+    toChain && (!hasDestWallet || !selectedDestWalletId) && !useCustomAddress,
   );
 
   // Show warning when using custom address but no wallet to sign mint tx
@@ -313,7 +314,6 @@ export function useBridgeCardState() {
     isValidAmount,
     useCustomAddress,
     customAddress,
-    isAddressValid,
     onUseCustomAddressChange: setUseCustomAddress,
     onCustomAddressChange: setCustomAddress,
     onAddressValidationChange: setIsAddressValid,
@@ -325,6 +325,7 @@ export function useBridgeCardState() {
     bridgeError,
     isBridging,
     canBridge,
+    needsSourceWallet,
     needsDestinationWallet,
     needsWalletForMinting,
     destNetworkName,

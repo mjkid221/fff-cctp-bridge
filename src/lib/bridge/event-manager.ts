@@ -76,7 +76,6 @@ export class BridgeEventManager {
     event: NormalizedBridgeEvent,
     callback: (tx: BridgeTransaction) => void,
   ): Promise<void> {
-    // Map event method to step ID
     const stepMapping: Record<string, string> = {
       approve: "approve",
       burn: "burn",
@@ -87,19 +86,15 @@ export class BridgeEventManager {
     const stepId = stepMapping[event.method];
     if (!stepId) return;
 
-    // Get transaction from storage
     const tx = await this.storage.getTransaction(txId);
     if (!tx) return;
 
-    // Find and update the step
     const step = tx.steps.find((s) => s.id === stepId);
     if (!step) return;
 
-    // Update step based on event
     step.status = "completed";
     step.timestamp = Date.now();
 
-    // Extract transaction hash if available
     if (event.values?.txHash) {
       step.txHash = String(event.values.txHash);
     }
@@ -125,11 +120,9 @@ export class BridgeEventManager {
       }
     }
 
-    // Save to storage
     tx.updatedAt = Date.now();
     await this.storage.saveTransaction(tx);
 
-    // Notify callback for UI update
     callback(tx);
   }
 

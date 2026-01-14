@@ -7,6 +7,7 @@ import {
   useCloseTransactionWindow,
   useFocusTransactionWindow,
   useUpdateTransactionWindowPosition,
+  useCancelTransaction,
   constrainToViewport,
   NETWORK_CONFIGS,
 } from "~/lib/bridge";
@@ -52,6 +53,7 @@ export function useMultiWindowBridgeProgressState({
   const setCurrentTransaction = useBridgeStore(
     (state) => state.setCurrentTransaction,
   );
+  const cancelTransaction = useCancelTransaction();
 
   const { transaction, position, zIndex } = transactionWindow;
 
@@ -127,8 +129,8 @@ export function useMultiWindowBridgeProgressState({
       await navigator.clipboard.writeText(text);
       setCopiedHash(text);
       setTimeout(() => setCopiedHash(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+    } catch {
+      // Clipboard API may fail silently
     }
   }, []);
 
@@ -190,8 +192,8 @@ export function useMultiWindowBridgeProgressState({
           token: "USDC",
         });
       }
-    } catch (err: unknown) {
-      console.error("Retry failed:", err);
+    } catch {
+      // Error handled by notification system
     }
   }, [
     transaction,
@@ -200,6 +202,30 @@ export function useMultiWindowBridgeProgressState({
     setCurrentTransaction,
     updateNotification,
   ]);
+
+  // Dismiss stuck transaction permanently (marks as cancelled in storage)
+  const handleDismiss = useCallback(async () => {
+    if (!transaction) return;
+
+    // Find the notification linked to this transaction
+    const notificationId =
+      transaction.notificationId ??
+      notifications.find((n) => n.bridgeTransactionId === transaction.id)?.id;
+
+    // Cancel the transaction
+    await cancelTransaction(transaction.id);
+
+    // Update the notification to show cancelled status
+    if (notificationId) {
+      updateNotification(notificationId, {
+        status: "failed",
+        title: "Transfer Cancelled",
+        message: `Cancelled bridge transfer of ${transaction.amount} USDC`,
+        actionLabel: undefined,
+        actionType: undefined,
+      });
+    }
+  }, [transaction, cancelTransaction, notifications, updateNotification]);
 
   const fromNetwork = transaction
     ? NETWORK_CONFIGS[transaction.fromChain]
@@ -210,6 +236,7 @@ export function useMultiWindowBridgeProgressState({
   const isFailed = transaction?.status === "failed";
   const isInProgress =
     transaction?.status === "pending" || transaction?.status === "bridging";
+  const isCancelled = transaction?.status === "cancelled";
 
   return {
     windowRef,
@@ -224,6 +251,7 @@ export function useMultiWindowBridgeProgressState({
     isCompleted,
     isFailed,
     isInProgress,
+    isCancelled,
     fromNetworkDisplayName: fromNetwork?.displayName ?? "",
     toNetworkDisplayName: toNetwork?.displayName ?? "",
     fromNetworkExplorerUrl: fromNetwork?.explorerUrl ?? "",
@@ -236,6 +264,7 @@ export function useMultiWindowBridgeProgressState({
     onMaximize: () => setIsMaximized(!isMaximized),
     onCopyToClipboard: copyToClipboard,
     onRetryStep: handleRetryStep,
+    onDismiss: handleDismiss,
     dragControls,
   };
 }

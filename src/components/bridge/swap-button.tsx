@@ -31,9 +31,9 @@ export function SwapButton({ onSwap }: SwapButtonProps) {
         whileTap={{ scale: 0.9 }}
         animate={{ rotate: rotation }}
         transition={{
-          type: "spring",
-          stiffness: 500,
-          damping: 25,
+          type: "tween",
+          duration: 0.15,
+          ease: "easeOut",
         }}
       >
         <ArrowDownUp className="text-foreground size-5" />

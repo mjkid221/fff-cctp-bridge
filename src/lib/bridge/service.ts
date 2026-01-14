@@ -75,7 +75,6 @@ export class CCTPBridgeService implements IBridgeService {
   private readonly eventManager: BridgeEventManager;
 
   private userAddress: string | null = null;
-  private wallet: Wallet<WalletConnectorCore.WalletConnector> | null = null;
   private wallets: Wallet<WalletConnectorCore.WalletConnector>[] = [];
 
   constructor(config: BridgeServiceConfig = {}) {
@@ -84,6 +83,19 @@ export class CCTPBridgeService implements IBridgeService {
     this.balanceService = config.balanceService ?? getBalanceService();
     this.storage = config.storage ?? BridgeStorage;
     this.eventManager = new BridgeEventManager(this.kit, this.storage);
+  }
+
+  /**
+   * Sync transaction state to all consumers (store, windows)
+   * Uses queueMicrotask to ensure React processes updates immediately
+   */
+  private syncTransactionState(transaction: BridgeTransaction): void {
+    queueMicrotask(() => {
+      const state = useBridgeStore.getState();
+      state.updateTransaction(transaction.id, transaction);
+      state.setCurrentTransaction(transaction);
+      state.updateTransactionInWindow(transaction.id, transaction);
+    });
   }
 
   /**
@@ -98,15 +110,8 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     this.userAddress = wallet?.address ?? null;
-    this.wallet = wallet ?? null;
     this.wallets = allWallets ?? (wallet ? [wallet] : []);
-
-    // Clear adapter cache for previous wallet
     this.adapterFactory.clearCache();
-
-    console.log(
-      `Bridge service initialized for ${this.userAddress} with ${this.wallets.length} wallet(s)`,
-    );
   }
 
   /**
@@ -235,11 +240,9 @@ export class CCTPBridgeService implements IBridgeService {
         config: { transferSpeed },
       });
 
-      // Process the estimate result
       const gasFees = estimate.gasFees ?? [];
       const providerFees = estimate.fees ?? [];
 
-      // Calculate total gas fees
       const totalGasFee = gasFees
         .reduce((sum, fee) => {
           const feeAmount = parseFloat(fee?.fees?.fee ?? "0");
@@ -247,7 +250,6 @@ export class CCTPBridgeService implements IBridgeService {
         }, 0)
         .toFixed(9);
 
-      // Calculate total provider fees
       const totalProviderFee = providerFees
         .reduce((sum, fee) => {
           const feeAmount = parseFloat(fee?.amount ?? "0");
@@ -255,7 +257,6 @@ export class CCTPBridgeService implements IBridgeService {
         }, 0)
         .toFixed(6);
 
-      // Get first gas fee for network info
       const firstGasFee = gasFees[0];
 
       return {
@@ -268,11 +269,13 @@ export class CCTPBridgeService implements IBridgeService {
           source: gasFees.find((f) => f.name === "Burn")?.fees?.fee ?? "0",
           destination: gasFees.find((f) => f.name === "Mint")?.fees?.fee,
         },
-        estimatedTime: getAttestationTime(params.fromChain), // Chain-specific attestation time
+        estimatedTime: getAttestationTime(
+          params.fromChain,
+          params.transferMethod === "fast",
+        ),
         receiveAmount: (
           parseFloat(params.amount) - parseFloat(totalProviderFee)
-        ).toString(), // Subtract provider fees
-        // Add detailed breakdown
+        ).toString(),
         detailedGasFees: gasFees.map((fee) => ({
           name: fee.name,
           token: fee.token,
@@ -305,70 +308,34 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Bridge service not initialized");
     }
 
-    // Validate the route
     if (!isRouteSupported(params.fromChain, params.toChain)) {
       throw new Error(
         `Route not supported: ${params.fromChain} -> ${params.toChain}`,
       );
     }
 
-    // Create operation context
     const context = await this.createOperationContext(params);
-
-    // Create initial transaction record
     const transaction = this.createInitialTransaction(context);
-
-    // Save to storage
     await this.storage.saveTransaction(transaction);
 
-    // Set as current transaction BEFORE starting bridge
-    // This allows event callbacks to update it during execution
+    // Set current transaction before starting so event callbacks can update it
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
-    // Start tracking events BEFORE bridge executes
     this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
-      // Use queueMicrotask to ensure React processes the state update
-      // Without this, updates may be batched and not render until execution completes
-      queueMicrotask(() => {
-        const state = useBridgeStore.getState();
-
-        // Update the transactions array
-        state.updateTransaction(transaction.id, updatedTx);
-
-        // Update currentTransaction for UI reactivity
-        state.setCurrentTransaction(updatedTx);
-
-        // Update the transaction in any open windows (multi-window support)
-        state.updateTransactionInWindow(transaction.id, updatedTx);
-
-        console.log(
-          `[Bridge Service] Updated transaction ${transaction.id.substring(0, 8)}... in store and windows`,
-        );
-      });
+      this.syncTransactionState(updatedTx);
     });
 
     try {
-      // Execute the bridge operation
       await this.executeBridgeOperation(context, transaction);
     } catch (error) {
-      // Handle bridge execution errors
       await this.handleBridgeError(transaction, error);
     } finally {
-      // Stop tracking when done
       this.eventManager.untrackTransaction(transaction.id);
     }
 
-    // Save final state
     transaction.updatedAt = Date.now();
     await this.storage.saveTransaction(transaction);
-
-    // Update the store with the final transaction state
-    // This is needed because processBridgeResult updates the transaction after
-    // the last EventManager callback fires, so the store may not have the final state
-    const state = useBridgeStore.getState();
-    state.updateTransaction(transaction.id, transaction);
-    state.setCurrentTransaction(transaction);
-    state.updateTransactionInWindow(transaction.id, transaction);
+    this.syncTransactionState(transaction);
 
     return transaction;
   }
@@ -402,34 +369,22 @@ export class CCTPBridgeService implements IBridgeService {
       );
     }
 
-    // Get adapters for retry
     const fromAdapter = await this.getAdapterForChain(originalTx.fromChain);
     const toAdapter = await this.getAdapterForChain(originalTx.toChain);
-
-    // Get completed steps from the original bridgeResult
     const bridgeResult = originalTx.bridgeResult as BridgeResult;
 
-    // Reuse the existing transaction - update in place instead of creating new
-    // This keeps the same ID, so windows and event tracking work automatically
+    // Reuse existing transaction to keep same ID for windows and event tracking
     const transaction = originalTx;
-
-    // Reset transaction state for retry
     transaction.status = "pending";
     transaction.error = undefined;
     transaction.updatedAt = Date.now();
 
-    // Reset failed/pending steps, keep completed steps
     transaction.steps = transaction.steps.map((step) => {
-      // Keep completed steps as-is
       if (step.status === "completed") {
-        return {
-          ...step,
-          error: undefined, // Clear any stale error
-        };
+        return { ...step, error: undefined };
       }
 
-      // FALLBACK: Check bridgeResult.steps for SDK's knowledge
-      // This handles edge cases where our steps weren't updated
+      // Check SDK's step state as fallback for edge cases
       const sdkStep = bridgeResult.steps.find(
         (s) => s.name.toLowerCase() === step.name.toLowerCase(),
       );
@@ -446,7 +401,6 @@ export class CCTPBridgeService implements IBridgeService {
         };
       }
 
-      // Reset non-completed steps for retry
       return {
         ...step,
         status: "pending" as const,
@@ -456,65 +410,37 @@ export class CCTPBridgeService implements IBridgeService {
       };
     });
 
-    // Save updated transaction (same ID)
     await this.storage.saveTransaction(transaction);
-
-    // Set as current transaction BEFORE starting retry
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
-    // Start tracking events BEFORE retry executes
-    // Same transaction ID means existing window will receive updates
     this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
-      queueMicrotask(() => {
-        const state = useBridgeStore.getState();
-        state.updateTransaction(transaction.id, updatedTx);
-        state.setCurrentTransaction(updatedTx);
-        state.updateTransactionInWindow(transaction.id, updatedTx);
-
-        console.log(
-          `[Bridge Service] Updated transaction ${transaction.id.substring(0, 8)}... in store and windows (retry)`,
-        );
-      });
+      this.syncTransactionState(updatedTx);
     });
 
     try {
-      // Update status to bridging
       transaction.status = "bridging";
-      // Find the first pending step (the one that needs retry) and set it to in_progress
       const stepToRetry = transaction.steps.find((s) => s.status === "pending");
       if (stepToRetry) {
         stepToRetry.status = "in_progress";
       }
       await this.storage.saveTransaction(transaction);
 
-      // Use Bridge Kit's retry API with the original bridgeResult
       const retryResult = await this.kit.retry(bridgeResult, {
         from: fromAdapter,
         to: toAdapter,
       });
 
-      // Store the retry result
       transaction.bridgeResult = retryResult;
-
-      // Process the result
       await this.processBridgeResult(transaction, retryResult);
     } catch (error) {
-      // Handle retry errors
       await this.handleBridgeError(transaction, error);
     } finally {
-      // Stop tracking when done
       this.eventManager.untrackTransaction(transaction.id);
     }
 
-    // Save final state
     transaction.updatedAt = Date.now();
     await this.storage.saveTransaction(transaction);
-
-    // Update the store with the final transaction state
-    const state = useBridgeStore.getState();
-    state.updateTransaction(transaction.id, transaction);
-    state.setCurrentTransaction(transaction);
-    state.updateTransactionInWindow(transaction.id, transaction);
+    this.syncTransactionState(transaction);
 
     return transaction;
   }
@@ -546,7 +472,6 @@ export class CCTPBridgeService implements IBridgeService {
   async supportsRoute(
     from: SupportedChainId,
     to: SupportedChainId,
-    _token = "USDC",
   ): Promise<boolean> {
     try {
       return isRouteSupported(from, to);
@@ -562,9 +487,7 @@ export class CCTPBridgeService implements IBridgeService {
     this.eventManager.dispose();
     this.adapterFactory.clearCache(this.userAddress ?? undefined);
     this.userAddress = null;
-    this.wallet = null;
     this.wallets = [];
-    console.log("Bridge service reset");
   }
 
   // ==================== Private Helper Methods ====================
@@ -612,28 +535,19 @@ export class CCTPBridgeService implements IBridgeService {
     const fromNetwork = NETWORK_CONFIGS[params.fromChain];
     const toNetwork = NETWORK_CONFIGS[params.toChain];
 
-    // CRITICAL: For EVM destination chains, switch the EVM wallet to the correct network
-    // BEFORE creating the adapter. This prevents "Unrecognized chain ID" errors when
-    // the primary wallet is a different chain type (e.g., Solana)
+    // Switch EVM wallets to correct network before creating adapters
     if (toNetwork.type === "evm" && toNetwork.evmChainId && params.destWallet) {
-      console.log(
-        `[Bridge Service] Switching destination EVM wallet to chain ${toNetwork.evmChainId} (${params.toChain})`,
-      );
       await EVMAdapterCreator.switchNetwork(
         params.destWallet,
         toNetwork.evmChainId,
       );
     }
 
-    // Similarly handle source chain EVM network switching if needed
     if (
       fromNetwork.type === "evm" &&
       fromNetwork.evmChainId &&
       params.sourceWallet
     ) {
-      console.log(
-        `[Bridge Service] Switching source EVM wallet to chain ${fromNetwork.evmChainId} (${params.fromChain})`,
-      );
       await EVMAdapterCreator.switchNetwork(
         params.sourceWallet,
         fromNetwork.evmChainId,
@@ -706,7 +620,10 @@ export class CCTPBridgeService implements IBridgeService {
       ],
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      estimatedTime: getAttestationTime(context.fromChain), // Chain-specific attestation time
+      estimatedTime: getAttestationTime(
+        context.fromChain,
+        context.transferSpeed === "FAST",
+      ),
     };
   }
 
@@ -717,19 +634,16 @@ export class CCTPBridgeService implements IBridgeService {
     context: BridgeOperationContext,
     transaction: BridgeTransaction,
   ): Promise<void> {
-    // Update status to bridging
     transaction.status = "bridging";
     const firstStep = transaction.steps[0];
     if (firstStep) {
       firstStep.status = "in_progress";
     }
 
-    // Store recipient address for retry
     transaction.recipientAddress = context.recipientAddress;
 
     await this.storage.saveTransaction(transaction);
 
-    // Execute bridge through Circle's Bridge Kit
     const result: BridgeResult = await this.kit.bridge({
       from: { adapter: context.fromAdapter, chain: context.fromChain },
       to: {
@@ -744,10 +658,8 @@ export class CCTPBridgeService implements IBridgeService {
       config: { transferSpeed: context.transferSpeed },
     });
 
-    // Store the bridge result for potential retry
     transaction.bridgeResult = result;
 
-    // Process the result
     await this.processBridgeResult(transaction, result);
   }
 
@@ -762,30 +674,24 @@ export class CCTPBridgeService implements IBridgeService {
       transaction.status = "completed";
       transaction.completedAt = Date.now();
 
-      // Update steps from result (marks as completed and extracts hashes)
       this.updateStepsFromResult(transaction, result);
 
-      // Mark any remaining steps as completed (in case result has fewer steps)
       transaction.steps.forEach((step) => {
         if (step.status !== "completed") {
           step.status = "completed";
         }
       });
 
-      // Extract transaction hashes
       this.extractTransactionHashes(transaction, result);
     } else {
       transaction.status = "failed";
 
-      // Extract error information
       const errorMessage = this.extractErrorMessage(result);
       transaction.error = errorMessage;
 
-      // Update steps based on result
       this.updateStepsFromResult(transaction, result);
     }
 
-    // Save transaction with updated steps immediately
     transaction.updatedAt = Date.now();
     await this.storage.saveTransaction(transaction);
   }
@@ -799,7 +705,6 @@ export class CCTPBridgeService implements IBridgeService {
   ): void {
     if (!result.steps || result.steps.length === 0) return;
 
-    // Find burn step
     const burnStep = result.steps.find((s) =>
       s.name?.toLowerCase().includes("burn"),
     );
@@ -807,7 +712,6 @@ export class CCTPBridgeService implements IBridgeService {
       transaction.sourceTxHash = String(burnStep.txHash);
     }
 
-    // Find mint step
     const mintStep = result.steps.find((s) =>
       s.name?.toLowerCase().includes("mint"),
     );
@@ -849,7 +753,6 @@ export class CCTPBridgeService implements IBridgeService {
     let mintStartedOrCompleted = false;
 
     result.steps.forEach((resultStep) => {
-      // Match by step name (case-insensitive)
       const stepName = String(resultStep.name).toLowerCase();
       const matchingStep = transaction.steps.find(
         (s) => s.name.toLowerCase() === stepName,
@@ -865,7 +768,6 @@ export class CCTPBridgeService implements IBridgeService {
         return;
       }
 
-      // Update step status based on Bridge Kit state
       if (resultStep.state === "success") {
         matchingStep.status = "completed";
         matchingStep.error = undefined; // Clear any stale errors from previous attempts
@@ -891,12 +793,10 @@ export class CCTPBridgeService implements IBridgeService {
         mintStartedOrCompleted = true;
       }
 
-      // Extract transaction hash if available
       if ("txHash" in resultStep && resultStep.txHash) {
         matchingStep.txHash = String(resultStep.txHash);
       }
 
-      // Extract error if step failed
       if (resultStep.state === "error") {
         if ("errorMessage" in resultStep && resultStep.errorMessage) {
           matchingStep.error = String(resultStep.errorMessage);
@@ -929,11 +829,9 @@ export class CCTPBridgeService implements IBridgeService {
         }
       }
 
-      // Update timestamp
       matchingStep.timestamp = Date.now();
     });
 
-    // Manage virtual attestation step
     const attestationStep = transaction.steps.find(
       (s) => s.id === "attestation",
     );
@@ -961,7 +859,6 @@ export class CCTPBridgeService implements IBridgeService {
     transaction.error =
       error instanceof Error ? error.message : "Unknown bridge error";
 
-    // Mark first step as failed
     const firstStep = transaction.steps[0];
     if (firstStep) {
       firstStep.status = "failed";

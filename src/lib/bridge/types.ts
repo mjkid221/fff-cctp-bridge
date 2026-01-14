@@ -192,3 +192,15 @@ export interface AdapterCapabilities {
 }
 
 export type Adapter = AdapterContext<AdapterCapabilities>["adapter"];
+
+/**
+ * Wallet option for UI selection dropdowns
+ */
+export interface WalletOption {
+  id: string;
+  address: string;
+  connector: {
+    key: string;
+    name?: string;
+  };
+}

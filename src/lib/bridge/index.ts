@@ -49,7 +49,6 @@ export {
   useWalletSelection,
   useWalletsByType,
 } from "./hooks";
-export type { WalletOption } from "./hooks";
 
 // Query keys for React Query cache management
 export { bridgeKeys } from "./query-keys";
@@ -70,11 +69,7 @@ export {
 } from "./address-validation";
 
 // Error parsing
-export {
-  parseTransactionError,
-  parseStepError,
-  isUserRejectionError,
-} from "./error-parser";
+export { parseTransactionError, parseStepError } from "./error-parser";
 export type { ParsedError } from "./error-parser";
 
 // Store
@@ -106,6 +101,7 @@ export {
   useUpdateTransactionWindowPosition,
   useUpdateTransactionInWindow,
   useMinimizeTransactionWindow,
+  useCancelTransaction,
 } from "./store";
 export type { TransactionWindow } from "./store";
 
@@ -121,6 +117,7 @@ export type {
   IBridgeService,
   Adapter,
   AdapterCapabilities,
+  WalletOption,
 } from "./types";
 
 // Networks

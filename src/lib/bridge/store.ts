@@ -75,6 +75,7 @@ export interface BridgeState {
   setTransactions: (transactions: BridgeTransaction[]) => void;
   addTransaction: (transaction: BridgeTransaction) => void;
   updateTransaction: (id: string, updates: Partial<BridgeTransaction>) => void;
+  cancelTransaction: (id: string) => Promise<void>;
 
   // Window management (for non-transaction windows like fee-details)
   activeWindow: WindowType | null;
@@ -92,6 +93,12 @@ export interface BridgeState {
   // Error state
   error: string | null;
   setError: (error: string | null) => void;
+
+  // CCTP Explainer (one-time modal for new users + manual open)
+  hasSeenCCTPExplainer: boolean;
+  setHasSeenCCTPExplainer: (seen: boolean) => void;
+  showCCTPExplainer: boolean;
+  setShowCCTPExplainer: (show: boolean) => void;
 
   // Actions
   loadTransactions: () => Promise<void>;
@@ -116,6 +123,8 @@ export const useBridgeStore = create<BridgeState>()(
       activeWindow: null,
       isLoading: false,
       error: null,
+      hasSeenCCTPExplainer: false,
+      showCCTPExplainer: false,
       windowPositions: { ...DEFAULT_WINDOW_POSITIONS },
       windowZIndexes: {
         "fee-details": 100,
@@ -333,11 +342,44 @@ export const useBridgeStore = create<BridgeState>()(
         }
       },
 
+      cancelTransaction: async (id) => {
+        // Update status to "cancelled" in memory
+        set((state) => ({
+          transactions: state.transactions.map((tx) =>
+            tx.id === id
+              ? { ...tx, status: "cancelled" as const, updatedAt: Date.now() }
+              : tx,
+          ),
+          // Clear currentTransaction if it matches
+          currentTransaction:
+            state.currentTransaction?.id === id
+              ? null
+              : state.currentTransaction,
+        }));
+
+        // Close the transaction window if open
+        get().closeTransactionWindow(id);
+
+        // Update in IndexedDB
+        const transaction = get().transactions.find((tx) => tx.id === id);
+        if (transaction) {
+          await BridgeStorage.saveTransaction({
+            ...transaction,
+            status: "cancelled",
+            updatedAt: Date.now(),
+          });
+        }
+      },
+
       // Loading
       setIsLoading: (loading) => set({ isLoading: loading }),
 
       // Error
       setError: (error) => set({ error }),
+
+      // CCTP Explainer
+      setHasSeenCCTPExplainer: (seen) => set({ hasSeenCCTPExplainer: seen }),
+      setShowCCTPExplainer: (show) => set({ showCCTPExplainer: show }),
 
       // Actions
       loadTransactions: async () => {
@@ -373,13 +415,9 @@ export const useBridgeStore = create<BridgeState>()(
         fromChain: state.fromChain,
         toChain: state.toChain,
         windowPositions: state.windowPositions,
+        hasSeenCCTPExplainer: state.hasSeenCCTPExplainer,
       }),
       onRehydrateStorage: () => (state) => {
-        // Called after store is rehydrated from localStorage
-        console.log(
-          "[Store] Rehydrated from localStorage:",
-          state?.windowPositions,
-        );
         state?.setHasHydrated(true);
       },
     },
@@ -401,8 +439,6 @@ export const useSetTransferMethod = () =>
 
 export const useUserAddress = () =>
   useBridgeStore((state) => state.userAddress);
-export const useSetUserAddress = () =>
-  useBridgeStore((state) => state.setUserAddress);
 
 export const useFromChain = () => useBridgeStore((state) => state.fromChain);
 export const useToChain = () => useBridgeStore((state) => state.toChain);
@@ -413,11 +449,6 @@ export const useSwapChains = () => useBridgeStore((state) => state.swapChains);
 
 export const useCurrentTransaction = () =>
   useBridgeStore((state) => state.currentTransaction);
-export const useTransactions = () =>
-  useBridgeStore((state) => state.transactions);
-
-export const useIsLoading = () => useBridgeStore((state) => state.isLoading);
-export const useError = () => useBridgeStore((state) => state.error);
 
 export const useActiveWindow = () =>
   useBridgeStore((state) => state.activeWindow);
@@ -437,6 +468,15 @@ export const useFocusWindow = () =>
 export const useHasHydrated = () =>
   useBridgeStore((state) => state._hasHydrated);
 
+export const useHasSeenCCTPExplainer = () =>
+  useBridgeStore((state) => state.hasSeenCCTPExplainer);
+export const useSetHasSeenCCTPExplainer = () =>
+  useBridgeStore((state) => state.setHasSeenCCTPExplainer);
+export const useShowCCTPExplainer = () =>
+  useBridgeStore((state) => state.showCCTPExplainer);
+export const useSetShowCCTPExplainer = () =>
+  useBridgeStore((state) => state.setShowCCTPExplainer);
+
 // Multi-window transaction hooks
 export const useOpenTransactionWindows = () =>
   useBridgeStore((state) => state.openTransactionWindows);
@@ -452,3 +492,5 @@ export const useUpdateTransactionInWindow = () =>
   useBridgeStore((state) => state.updateTransactionInWindow);
 export const useMinimizeTransactionWindow = () =>
   useBridgeStore((state) => state.minimizeTransactionWindow);
+export const useCancelTransaction = () =>
+  useBridgeStore((state) => state.cancelTransaction);
