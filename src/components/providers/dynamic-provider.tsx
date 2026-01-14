@@ -8,14 +8,8 @@ import {
 
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 import { SolanaWalletConnectors } from "@dynamic-labs/solana";
-import { SuiWalletConnectors } from "@dynamic-labs/sui";
 import { env } from "~/env";
-import {
-  EthereumIcon,
-  SolanaIcon,
-  ArbitrumIcon,
-  SuiIcon,
-} from "@dynamic-labs/iconic";
+import { EthereumIcon, SolanaIcon, ArbitrumIcon } from "@dynamic-labs/iconic";
 
 import { WalletProvider } from "~/lib/wallet/wallet-context";
 import {
@@ -53,7 +47,8 @@ export const DynamicProvider = ({
         walletConnectors: [
           EthereumWalletConnectors,
           SolanaWalletConnectors,
-          SuiWalletConnectors,
+          // Re-add SUI back in the future
+          // SuiWalletConnectors,
         ],
         overrides: {
           views: [
@@ -81,10 +76,11 @@ export const DynamicProvider = ({
                     label: { icon: <ArbitrumIcon /> },
                     walletsFilter: FilterChain("EVM"),
                   },
-                  {
-                    label: { icon: <SuiIcon /> },
-                    walletsFilter: FilterChain("SUI"),
-                  },
+                  // TO re-add SUI back in the future
+                  // {
+                  //   label: { icon: <SuiIcon /> },
+                  //   walletsFilter: FilterChain("SUI"),
+                  // },
                 ],
               },
             },
