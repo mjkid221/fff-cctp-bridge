@@ -104,12 +104,16 @@ The bridge supports the following networks:
 - Base
 - Arbitrum
 - Solana
+- Monad
+- HyperEVM
 
 **Testnet:**
 - Ethereum Sepolia
 - Base Sepolia
 - Arbitrum Sepolia
 - Solana Devnet
+- Monad Testnet
+- HyperEVM Testnet
 
 Network configurations can be modified in `src/lib/bridge/networks.ts`.
 
