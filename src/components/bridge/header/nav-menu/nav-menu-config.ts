@@ -1,5 +1,6 @@
 import { History, Github, FileText, Gamepad2, HelpCircle } from "lucide-react";
 import { XIcon } from "~/components/icons";
+import { EXTERNAL_LINKS } from "~/lib/constants";
 import type { NavMenuItem } from "./nav-menu.types";
 
 export const NAV_MENU_CONFIG: NavMenuItem[] = [
@@ -31,7 +32,7 @@ export const NAV_MENU_CONFIG: NavMenuItem[] = [
       {
         id: "circle-faucet",
         label: "Circle Faucet",
-        href: "https://faucet.circle.com/",
+        href: EXTERNAL_LINKS.CIRCLE_FAUCET,
       },
     ],
   },
@@ -44,19 +45,19 @@ export const NAV_MENU_CONFIG: NavMenuItem[] = [
         id: "github",
         icon: Github,
         label: "GitHub",
-        href: "https://github.com/mjkid221/cctp-bridge",
+        href: EXTERNAL_LINKS.GITHUB_REPO,
       },
       {
         id: "creator",
         icon: XIcon,
         label: "Creator",
-        href: "https://x.com/mjkid0",
+        href: EXTERNAL_LINKS.CREATOR_X,
       },
       {
         id: "docs",
         icon: FileText,
         label: "Bridge Kit Documentation",
-        href: "https://developers.circle.com/bridge-kit#bridge-kit",
+        href: EXTERNAL_LINKS.BRIDGE_KIT_DOCS,
         separatorBefore: true,
       },
       {

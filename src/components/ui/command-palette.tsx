@@ -22,6 +22,7 @@ import { XIcon } from "~/components/icons";
 import { cn } from "~/lib/utils";
 import { useWalletContext } from "~/lib/wallet/wallet-context";
 import { useEnvironment, useSetEnvironment } from "~/lib/bridge";
+import { EXTERNAL_LINKS } from "~/lib/constants";
 import { WindowPortal } from "~/components/ui/window-portal";
 
 interface CommandPaletteProps {
@@ -238,7 +239,7 @@ export function CommandPalette({
                       <CommandItem
                         onSelect={() =>
                           runCommand(() =>
-                            window.open("https://faucet.circle.com/", "_blank"),
+                            window.open(EXTERNAL_LINKS.CIRCLE_FAUCET, "_blank"),
                           )
                         }
                         icon={<TestTube className="size-4" />}
@@ -249,10 +250,7 @@ export function CommandPalette({
                     <CommandItem
                       onSelect={() =>
                         runCommand(() =>
-                          window.open(
-                            "https://github.com/mjkid221/cctp-bridge",
-                            "_blank",
-                          ),
+                          window.open(EXTERNAL_LINKS.GITHUB_REPO, "_blank"),
                         )
                       }
                       icon={<Github className="size-4" />}
@@ -262,7 +260,7 @@ export function CommandPalette({
                     <CommandItem
                       onSelect={() =>
                         runCommand(() =>
-                          window.open("https://x.com/mjkid0", "_blank"),
+                          window.open(EXTERNAL_LINKS.CREATOR_X, "_blank"),
                         )
                       }
                       icon={<XIcon className="size-4" />}
@@ -272,10 +270,7 @@ export function CommandPalette({
                     <CommandItem
                       onSelect={() =>
                         runCommand(() =>
-                          window.open(
-                            "https://developers.circle.com/bridge-kit#bridge-kit",
-                            "_blank",
-                          ),
+                          window.open(EXTERNAL_LINKS.BRIDGE_KIT_DOCS, "_blank"),
                         )
                       }
                       icon={<FileText className="size-4" />}

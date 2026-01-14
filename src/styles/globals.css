@@ -228,6 +228,7 @@
   right: 2px;
 }
 
+/* For theme toggle */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

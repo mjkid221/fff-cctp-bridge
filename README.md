@@ -34,7 +34,7 @@ Key principles:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/mjkid221/cctp-bridge.git
+   git clone https://github.com/mjkid221/fff-cctp-bridge.git
    cd cctp-bridge
    ```
 
@@ -144,6 +144,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Links
 
-- [GitHub Repository](https://github.com/mjkid221/cctp-bridge)
+- [GitHub Repository](https://github.com/mjkid221/fff-cctp-bridge)
 - [Bridge Kit Documentation](https://developers.circle.com/bridge-kit#bridge-kit)
 - [Twitter](https://x.com/mjkid0)
