@@ -20,7 +20,6 @@ const config = {
       "motion",
     ],
   },
-  distDir: "build",
 };
 
 export default withBundleAnalyzer(config);
