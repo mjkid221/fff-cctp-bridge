@@ -1,10 +1,10 @@
 # FFF CCTP Bridge
 
-FFF (Finally Fucking Free) Bridge is an open source Cross-Chain Transfer Protocol (CCTP) v2 interface for bridging USDC across multiple blockchain networks using Circle's Bridge Kit.
+FFF (Fuck Fees Forever) Bridge is an open source Cross-Chain Transfer Protocol (CCTP) v2 interface for bridging USDC across multiple blockchain networks using Circle's Bridge Kit. If you are tired of bridges taking a cut of your USDC each time then you are in the right place. Get USDC you've asked for anytime, anywhere.
 
 ## Overview
 
-FFF Bridge provides a user-friendly interface for transferring USDC between EVM networks (Ethereum, Base, Arbitrum, Monad, HyperLiquid) and Solana using Circle's CCTP protocol. The application charges no additional fees beyond Circle's native fees on fast transfer mode.
+FFF Bridge provides a user-friendly interface for transferring USDC between EVM networks (Ethereum, Base, Arbitrum, Monad, HyperLiquid) and Solana using Circle's CCTP protocol. The application charges no additional fees beyond Circle's native fees on fast transfer mode (excluding gas fees user pays to submit transactions).
 
 Key principles:
 - **Offline-first architecture** - Transaction history is stored locally using IndexedDB
@@ -20,8 +20,9 @@ Key principles:
 - Real-time fee estimation
 - Retry capability for failed transactions
 - Responsive UI with light/dark theme support
-- Support for Monad via the Bridge Kit.
-- Play Pong.
+- Support for Monad via the Bridge Kit
+- Optional testnet testing
+- <strong><ins>Play Pong</ins></strong>
 
 ## Getting Started
 
