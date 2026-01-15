@@ -6,6 +6,7 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 import { DynamicProvider } from "~/components/providers/dynamic-provider";
 import { RootScrollArea } from "~/components/ui/scroll-area";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "FFF CCTP Bridge - Cross-Chain USDC Transfer",
@@ -30,6 +31,7 @@ export default function RootLayout({
             <RootScrollArea>{children}</RootScrollArea>
           </DynamicProvider>
         </TRPCReactProvider>
+        <Analytics />
       </body>
     </html>
   );
