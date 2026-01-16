@@ -48,14 +48,22 @@ export function useNotificationPanelState({
       if (notification.bridgeTransactionId) {
         // Skip temporary pending IDs (created before real transaction exists)
         if (!notification.bridgeTransactionId.startsWith("pending_")) {
-          // Load transaction from IndexedDB
-          const transaction = await BridgeStorage.getTransaction(
-            notification.bridgeTransactionId,
+          // First try to get from in-memory store (faster, always up-to-date)
+          const storeState = useBridgeStore.getState();
+          let transaction = storeState.transactions.find(
+            (tx) => tx.id === notification.bridgeTransactionId,
           );
+
+          // Fall back to IndexedDB if not found in store
+          if (!transaction) {
+            transaction = await BridgeStorage.getTransaction(
+              notification.bridgeTransactionId,
+            );
+          }
 
           if (transaction) {
             // Open a new transaction window (or focus existing one)
-            useBridgeStore.getState().openTransactionWindow(transaction);
+            storeState.openTransactionWindow(transaction);
           }
         }
 
@@ -69,7 +77,7 @@ export function useNotificationPanelState({
   );
 
   const handleClearAll = useCallback(() => {
-    clearAll();
+    void clearAll();
   }, [clearAll]);
 
   const handleClose = useCallback(() => {

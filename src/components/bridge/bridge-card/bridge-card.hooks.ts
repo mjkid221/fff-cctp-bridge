@@ -170,7 +170,7 @@ export function useBridgeCardState() {
     let notificationId: string | undefined;
 
     try {
-      notificationId = addNotification({
+      notificationId = await addNotification({
         type: "bridge",
         status: "in_progress",
         title: "Bridge Started",
@@ -203,7 +203,7 @@ export function useBridgeCardState() {
 
       if (result && notificationId) {
         if (result.status === "completed") {
-          updateNotification(notificationId, {
+          void updateNotification(notificationId, {
             status: "success",
             title: "Bridge Completed",
             message: `Successfully transferred ${amount} USDC from ${NETWORK_CONFIGS[fromChain]?.displayName} to ${NETWORK_CONFIGS[toChain]?.displayName}`,
@@ -218,7 +218,7 @@ export function useBridgeCardState() {
           const errorToDisplay: unknown = result.error ?? "Transaction failed";
           const parsed = parseTransactionError(errorToDisplay);
 
-          updateNotification(notificationId, {
+          void updateNotification(notificationId, {
             status: "failed",
             title: parsed.isUserRejection
               ? "Transaction Rejected"
@@ -234,7 +234,7 @@ export function useBridgeCardState() {
       const parsed = parseTransactionError(error);
 
       if (notificationId) {
-        updateNotification(notificationId, {
+        void updateNotification(notificationId, {
           status: "failed",
           title: parsed.isUserRejection
             ? "Transaction Rejected"

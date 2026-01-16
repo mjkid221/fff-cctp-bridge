@@ -136,25 +136,31 @@ export function BridgeCardView({
                 excludeChainId={toChain}
               />
 
-              {/* Source Wallet Selector */}
-              {fromChain && sourceWallets.length > 0 && (
-                <WalletSelector
-                  wallets={sourceWallets}
-                  selectedWalletId={selectedSourceWalletId}
-                  onSelectWallet={onSelectSourceWallet}
-                  label="Source Wallet"
-                  networkType={NETWORK_CONFIGS[fromChain]?.type ?? "evm"}
-                />
-              )}
-
-              {/* Source Wallet Warning */}
-              <AnimatePresence>
-                {needsSourceWallet && fromChain && (
+              {/* Source Wallet Selector or Warning */}
+              <AnimatePresence mode="wait">
+                {fromChain && sourceWallets.length > 0 ? (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    key="source-wallet-selector"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <WalletSelector
+                      wallets={sourceWallets}
+                      selectedWalletId={selectedSourceWalletId}
+                      onSelectWallet={onSelectSourceWallet}
+                      label="Source Wallet"
+                      networkType={NETWORK_CONFIGS[fromChain]?.type ?? "evm"}
+                    />
+                  </motion.div>
+                ) : needsSourceWallet && fromChain ? (
+                  <motion.div
+                    key="source-wallet-warning"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="bg-muted/30 overflow-hidden rounded-xl p-1 backdrop-blur-xl"
                   >
                     <div className="bg-card/80 border-border/50 flex items-center gap-3 rounded-lg border p-3 shadow-sm">
@@ -182,7 +188,7 @@ export function BridgeCardView({
                       </Button>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
 
               {/* Amount Input */}
@@ -232,35 +238,15 @@ export function BridgeCardView({
                     </div>
                   </div>
 
-                  <div className="relative" style={{ perspective: "1000px" }}>
-                    <motion.div
-                      key={
-                        useCustomAddress ? "custom-input" : "wallet-selector"
-                      }
-                      initial={{
-                        rotateY: -90,
-                        opacity: 0,
-                        scale: 0.9,
-                      }}
-                      animate={{
-                        rotateY: 0,
-                        opacity: 1,
-                        scale: 1,
-                      }}
-                      exit={{
-                        rotateY: 90,
-                        opacity: 0,
-                        scale: 0.9,
-                      }}
-                      transition={{
-                        duration: 0.4,
-                        ease: [0.34, 1.56, 0.64, 1],
-                      }}
-                      style={{
-                        transformStyle: "preserve-3d",
-                      }}
-                    >
-                      {useCustomAddress ? (
+                  <AnimatePresence mode="wait">
+                    {useCustomAddress ? (
+                      <motion.div
+                        key="custom-input"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                      >
                         <DestinationAddressInput
                           networkType={toNetworkType}
                           value={customAddress}
@@ -272,7 +258,15 @@ export function BridgeCardView({
                             selectedDestWalletAddress ?? destWalletAddress
                           }
                         />
-                      ) : (
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="wallet-selector"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                      >
                         <WalletSelector
                           wallets={destWallets}
                           selectedWalletId={selectedDestWalletId}
@@ -281,20 +275,21 @@ export function BridgeCardView({
                           networkType={NETWORK_CONFIGS[toChain]?.type ?? "evm"}
                           placeholder="Select destination wallet"
                         />
-                      )}
-                    </motion.div>
-                  </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
-              {/* Warning: Need wallet for minting with custom address */}
-              <AnimatePresence>
-                {needsWalletForMinting && toChain && (
+              {/* Destination Wallet Warnings */}
+              <AnimatePresence mode="wait">
+                {needsWalletForMinting && toChain ? (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    key="minting-wallet-warning"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="bg-muted/30 overflow-hidden rounded-xl p-1 backdrop-blur-xl"
                   >
                     <div className="bg-card/80 border-border/50 flex items-center gap-3 rounded-lg border p-3 shadow-sm">
@@ -320,17 +315,13 @@ export function BridgeCardView({
                       </Button>
                     </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Destination Wallet Warning */}
-              <AnimatePresence>
-                {needsDestinationWallet && toChain && (
+                ) : needsDestinationWallet && toChain ? (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    key="destination-wallet-warning"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="bg-muted/30 overflow-hidden rounded-xl p-1 backdrop-blur-xl"
                   >
                     <div className="bg-card/80 border-border/50 flex items-center gap-3 rounded-lg border p-3 shadow-sm">
@@ -361,7 +352,7 @@ export function BridgeCardView({
                       </Button>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
 
               {/* Simple Fee Summary */}

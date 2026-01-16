@@ -22,7 +22,7 @@ export function useNotificationItemState({
   const handleDismiss = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      removeNotification(notification.id);
+      void removeNotification(notification.id);
     },
     [removeNotification, notification.id],
   );

@@ -14,6 +14,8 @@ export {
   useNotifications,
   useUnreadCount,
   useIsNotificationPanelOpen,
+  useNotificationsLoaded,
+  useLoadNotifications,
   useAddNotification,
   useUpdateNotification,
   useRemoveNotification,
@@ -22,3 +24,5 @@ export {
   useToggleNotificationPanel,
   useSetNotificationPanelOpen,
 } from "./store";
+
+export { NotificationStorage } from "./storage";

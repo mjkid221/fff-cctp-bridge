@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell } from "lucide-react";
 import {
   useUnreadCount,
   useToggleNotificationPanel,
   useIsNotificationPanelOpen,
+  useLoadNotifications,
 } from "~/lib/notifications";
 import { cn } from "~/lib/utils";
 
@@ -13,6 +15,12 @@ export function NotificationBell() {
   const unreadCount = useUnreadCount();
   const togglePanel = useToggleNotificationPanel();
   const isOpen = useIsNotificationPanelOpen();
+  const loadNotifications = useLoadNotifications();
+
+  // Load notifications from IndexedDB on mount
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
 
   return (
     <motion.button

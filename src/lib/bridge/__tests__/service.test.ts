@@ -412,6 +412,47 @@ describe("CCTPBridgeService", () => {
         "Service not initialized",
       );
     });
+
+    it("should use compatible wallet address for each chain type (multi-wallet)", async () => {
+      const evmAddress = "0x95BE86F56dF18E6F6a60427527df0fDE09D0Cce8";
+      const solanaAddress = "Bv8kLPjUvREWG3S1oZiGqRhAYB4mYZmxrSSZ3MqfkPj3";
+
+      const evmWallet = createMockWallet(evmAddress, "evm");
+      const solanaWallet = createMockWallet(solanaAddress, "solana");
+
+      // Update mock to return different canHandle results based on wallet/network type
+      mockAdapterFactory.getCreator.mockImplementation(
+        (networkType: string) => ({
+          canHandle: (wallet: { type: string }) => wallet.type === networkType,
+        }),
+      );
+
+      // Initialize with EVM as primary, both wallets available
+      await service.initialize(
+        evmWallet as unknown as Parameters<typeof service.initialize>[0],
+        [evmWallet, solanaWallet] as unknown as Parameters<
+          typeof service.initialize
+        >[1],
+      );
+
+      // Get Solana balance - should use Solana wallet's address, NOT EVM
+      await service.getBalance("Solana_Devnet");
+
+      expect(mockBalanceService.getUSDCBalance).toHaveBeenCalledWith(
+        expect.anything(),
+        "Solana_Devnet",
+        solanaAddress, // Must be Solana address, not EVM address
+      );
+
+      // Verify EVM balance still uses EVM address
+      await service.getBalance("Ethereum");
+
+      expect(mockBalanceService.getUSDCBalance).toHaveBeenCalledWith(
+        expect.anything(),
+        "Ethereum",
+        evmAddress,
+      );
+    });
   });
 
   describe("supportsRoute", () => {

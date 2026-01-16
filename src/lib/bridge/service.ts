@@ -202,8 +202,31 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Service not initialized");
     }
 
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    // Find the compatible wallet for this chain type to get the correct address
+    const compatibleWallet = this.wallets.find((w) => {
+      try {
+        const creator = this.adapterFactory.getCreator(network.type);
+        return creator?.canHandle(w) ?? false;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!compatibleWallet) {
+      throw new Error(`No compatible wallet for ${network.type} network`);
+    }
+
     const adapter = await this.getAdapterForChain(chain);
-    return this.balanceService.getUSDCBalance(adapter, chain, this.userAddress);
+    return this.balanceService.getUSDCBalance(
+      adapter,
+      chain,
+      compatibleWallet.address,
+    );
   }
 
   /**

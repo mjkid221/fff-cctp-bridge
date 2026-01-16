@@ -183,7 +183,7 @@ export function useMultiWindowBridgeProgressState({
       const notificationUpdate = getNotificationUpdate();
 
       if (notificationId) {
-        updateNotification(notificationId, {
+        void updateNotification(notificationId, {
           ...notificationUpdate,
           bridgeTransactionId: retryTransaction.id,
           fromChain: NETWORK_CONFIGS[transaction.fromChain]?.displayName,
@@ -217,7 +217,7 @@ export function useMultiWindowBridgeProgressState({
 
     // Update the notification to show cancelled status
     if (notificationId) {
-      updateNotification(notificationId, {
+      void updateNotification(notificationId, {
         status: "failed",
         title: "Transfer Cancelled",
         message: `Cancelled bridge transfer of ${transaction.amount} USDC`,
