@@ -13,6 +13,7 @@ import {
   NETWORK_CONFIGS,
   type SupportedChainId,
 } from "../networks";
+import { getViemChain } from "../chain-utils";
 
 // Solana RPC endpoints (from Circle's adapter defaults)
 const SOLANA_RPC_ENDPOINTS = {
@@ -51,10 +52,18 @@ export class EVMAdapterCreator implements IAdapterCreator {
    * Switch EVM wallet to target network before creating adapter
    * This is critical for cross-chain bridges where the destination chain
    * may be different from the wallet's current network
+   *
+   * If the chain doesn't exist in the wallet, it will attempt to add it first
+   * using wallet_addEthereumChain before switching.
+   *
+   * @param wallet - The wallet to switch networks on
+   * @param targetChainId - The numeric EVM chain ID to switch to
+   * @param chainId - Optional SupportedChainId for resolving viem chain config
    */
   static async switchNetwork(
     wallet: IWallet,
     targetChainId: number,
+    chainId?: SupportedChainId,
   ): Promise<void> {
     if (wallet.chainType !== "evm") {
       console.warn(
@@ -76,6 +85,38 @@ export class EVMAdapterCreator implements IAdapterCreator {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
+      // Check if error is "unrecognized chain" - wallet doesn't have this chain configured
+      const isUnrecognizedChain =
+        message.includes("Unrecognized chain") ||
+        message.includes("wallet_addEthereumChain") ||
+        message.includes("chain has not been added") ||
+        message.includes("Try adding the chain");
+
+      if (isUnrecognizedChain && chainId && wallet.addChain) {
+        console.log(
+          `[EVMAdapter] Chain ${targetChainId} not found in wallet, attempting to add...`,
+        );
+
+        const viemChain = getViemChain(chainId);
+        if (!viemChain) {
+          throw new Error(
+            `Failed to add chain ${targetChainId}: chain config not available for ${chainId}`,
+          );
+        }
+
+        await wallet.addChain(viemChain);
+        console.log(
+          `[EVMAdapter] Chain ${targetChainId} added, now switching...`,
+        );
+
+        await wallet.switchNetwork(targetChainId);
+        console.log(
+          `[EVMAdapter] Successfully added and switched to chain ${targetChainId}`,
+        );
+        return;
+      }
+
       console.error(`[EVMAdapter] Failed to switch network:`, error);
       throw new Error(`Failed to switch to chain ${targetChainId}: ${message}`);
     }
@@ -99,7 +140,6 @@ export class EVMAdapterCreator implements IAdapterCreator {
       throw new Error("Failed to get EVM wallet client");
     }
 
-    // Create EVM adapter using Circle's factory
     return await createEvmAdapter({
       provider: providerResult as unknown as Parameters<
         typeof createEvmAdapter
@@ -131,7 +171,6 @@ export class SolanaAdapterCreator implements IAdapterCreator {
       throw new Error("Wallet does not support Solana provider");
     }
 
-    // Get Solana provider from wallet abstraction
     const solanaProvider = await wallet.getSolanaProvider();
 
     // Determine RPC endpoint based on chain environment
@@ -160,7 +199,6 @@ export class SolanaAdapterCreator implements IAdapterCreator {
 
     const connection = new Connection(rpcEndpoint);
 
-    // Create Solana adapter using Circle's factory
     return await createSolanaAdapter({
       provider: solanaProvider,
       connection,

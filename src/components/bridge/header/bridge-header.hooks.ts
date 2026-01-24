@@ -2,7 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { useWalletContext } from "~/lib/wallet/wallet-context";
-import { useEnvironment } from "~/lib/bridge";
+import {
+  useEnvironment,
+  useHeaderControlOrder,
+  useSetHeaderControlOrder,
+} from "~/lib/bridge";
 import { useCCTPExplainer } from "../cctp-explainer";
 
 export function useHeaderState() {
@@ -10,10 +14,14 @@ export function useHeaderState() {
   const { primaryWallet, isWalletManagerOpen } = walletContext;
 
   const environment = useEnvironment();
+  const headerControlOrder = useHeaderControlOrder();
+  const setHeaderControlOrder = useSetHeaderControlOrder();
   const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showPongGame, setShowPongGame] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [isDraggingControls, setIsDraggingControls] = useState(false);
 
   // CCTP Explainer (managed via store)
   const {
@@ -53,6 +61,10 @@ export function useHeaderState() {
     setShowPongGame((prev) => !prev);
   }, []);
 
+  const handleToggleStats = useCallback(() => {
+    setShowStats((prev) => !prev);
+  }, []);
+
   const handleCloseTransactionHistory = useCallback(() => {
     setShowTransactionHistory(false);
   }, []);
@@ -63,6 +75,10 @@ export function useHeaderState() {
 
   const handleClosePongGame = useCallback(() => {
     setShowPongGame(false);
+  }, []);
+
+  const handleCloseStats = useCallback(() => {
+    setShowStats(false);
   }, []);
 
   const handleOpenTransactionHistory = useCallback(() => {
@@ -77,12 +93,25 @@ export function useHeaderState() {
     setShowPongGame(true);
   }, []);
 
+  const handleOpenStats = useCallback(() => {
+    setShowStats(true);
+  }, []);
+
   const handleOpenCommandPalette = useCallback(() => {
     setCommandPaletteOpen(true);
   }, []);
 
   const handleCloseCommandPalette = useCallback(() => {
     setCommandPaletteOpen(false);
+  }, []);
+
+  const handleDragStart = useCallback(() => {
+    setIsDraggingControls(true);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    // Small delay to prevent click events from firing after drag ends
+    setTimeout(() => setIsDraggingControls(false), 100);
   }, []);
 
   return {
@@ -95,11 +124,19 @@ export function useHeaderState() {
     showTransactionHistory,
     showDisclaimer,
     showPongGame,
+    showStats,
     showExplainer,
     commandPaletteOpen,
 
     // Environment
     environment,
+
+    // Header control order (for drag-to-reorder)
+    headerControlOrder,
+    onReorderHeaderControls: setHeaderControlOrder,
+    isDraggingControls,
+    onDragStartControls: handleDragStart,
+    onDragEndControls: handleDragEnd,
 
     // Actions
     onConnectWallet: handleConnectWallet,
@@ -109,13 +146,16 @@ export function useHeaderState() {
     onToggleTransactionHistory: handleToggleTransactionHistory,
     onToggleDisclaimer: handleToggleDisclaimer,
     onTogglePongGame: handleTogglePongGame,
+    onToggleStats: handleToggleStats,
     onCloseTransactionHistory: handleCloseTransactionHistory,
     onCloseDisclaimer: handleCloseDisclaimer,
     onClosePongGame: handleClosePongGame,
+    onCloseStats: handleCloseStats,
     onCloseExplainer: handleCloseExplainer,
     onOpenTransactionHistory: handleOpenTransactionHistory,
     onOpenDisclaimer: handleOpenDisclaimer,
     onOpenPongGame: handleOpenPongGame,
+    onOpenStats: handleOpenStats,
     onOpenExplainer: handleOpenExplainer,
     onOpenCommandPalette: handleOpenCommandPalette,
     onCloseCommandPalette: handleCloseCommandPalette,

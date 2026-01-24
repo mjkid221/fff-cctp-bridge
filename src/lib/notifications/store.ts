@@ -1,27 +1,29 @@
 /**
- * Notification store using Zustand with persistence
+ * Notification store using Zustand with IndexedDB persistence
  */
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Notification } from "./types";
+import { NotificationStorage } from "./storage";
 
 interface NotificationState {
   notifications: Notification[];
   isOpen: boolean; // Notification panel open state
+  isLoaded: boolean; // Whether notifications have been loaded from IndexedDB
 
   // Actions
+  loadNotifications: () => Promise<void>;
   addNotification: (
     notification: Omit<Notification, "id" | "timestamp" | "read">,
-  ) => string; // Returns notification ID
+  ) => Promise<string>; // Returns notification ID
   updateNotification: (
     id: string,
     updates: Partial<Omit<Notification, "id" | "timestamp">>,
-  ) => void;
-  removeNotification: (id: string) => void;
+  ) => Promise<void>;
+  removeNotification: (id: string) => Promise<void>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
-  clearAll: () => void;
+  clearAll: () => Promise<void>;
   setIsOpen: (isOpen: boolean) => void;
   togglePanel: () => void;
 
@@ -30,103 +32,117 @@ interface NotificationState {
   getNotificationById: (id: string) => Notification | undefined;
 }
 
-export const useNotificationStore = create<NotificationState>()(
-  persist(
-    (set, get) => ({
-      notifications: [],
-      isOpen: false,
+export const useNotificationStore = create<NotificationState>()((set, get) => ({
+  notifications: [],
+  isOpen: false,
+  isLoaded: false,
 
-      addNotification: (notification) => {
-        const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const timestamp = Date.now();
+  loadNotifications: async () => {
+    if (get().isLoaded) return;
 
-        const newNotification: Notification = {
-          ...notification,
-          id,
-          timestamp,
-          read: false,
-        };
+    const notifications = await NotificationStorage.getAll();
+    set({ notifications, isLoaded: true });
+  },
 
-        set((state) => ({
-          notifications: [newNotification, ...state.notifications].slice(0, 50), // Keep last 50
-        }));
+  addNotification: async (notification) => {
+    const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = Date.now();
 
-        // Auto-dismiss if specified
-        if (newNotification.autoDismissAfter) {
-          setTimeout(() => {
-            get().removeNotification(id);
-          }, newNotification.autoDismissAfter);
-        }
+    const newNotification: Notification = {
+      ...notification,
+      id,
+      timestamp,
+      read: false,
+    };
 
-        return id; // Return the ID so it can be referenced later
-      },
+    await NotificationStorage.save(newNotification);
 
-      updateNotification: (id, updates) => {
-        set((state) => ({
-          notifications: state.notifications.map((n) =>
-            n.id === id ? { ...n, ...updates } : n,
-          ),
-        }));
-      },
+    set((state) => ({
+      notifications: [newNotification, ...state.notifications].slice(0, 50),
+    }));
 
-      removeNotification: (id) => {
-        set((state) => ({
-          notifications: state.notifications.filter((n) => n.id !== id),
-        }));
-      },
+    // Auto-dismiss if specified
+    if (newNotification.autoDismissAfter) {
+      setTimeout(() => {
+        void get().removeNotification(id);
+      }, newNotification.autoDismissAfter);
+    }
 
-      markAsRead: (id) => {
-        set((state) => ({
-          notifications: state.notifications.map((n) =>
-            n.id === id ? { ...n, read: true } : n,
-          ),
-        }));
-      },
+    return id;
+  },
 
-      markAllAsRead: () => {
-        set((state) => ({
-          notifications: state.notifications.map((n) => ({ ...n, read: true })),
-        }));
-      },
+  updateNotification: async (id, updates) => {
+    await NotificationStorage.update(id, updates);
 
-      clearAll: () => {
-        set({ notifications: [] });
-      },
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, ...updates } : n,
+      ),
+    }));
+  },
 
-      setIsOpen: (isOpen) => {
-        set({ isOpen });
-        // Mark all as read when opening panel
-        if (isOpen) {
-          get().markAllAsRead();
-        }
-      },
+  removeNotification: async (id) => {
+    await NotificationStorage.remove(id);
 
-      togglePanel: () => {
-        const newIsOpen = !get().isOpen;
-        set({ isOpen: newIsOpen });
-        // Mark all as read when opening panel
-        if (newIsOpen) {
-          get().markAllAsRead();
-        }
-      },
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
+    }));
+  },
 
-      getUnreadCount: () => {
-        return get().notifications.filter((n) => !n.read).length;
-      },
+  markAsRead: (id) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n,
+      ),
+    }));
 
-      getNotificationById: (id) => {
-        return get().notifications.find((n) => n.id === id);
-      },
-    }),
-    {
-      name: "cctp-bridge-notifications",
-      partialize: (state) => ({
-        notifications: state.notifications,
-        // Don't persist isOpen state
-      }),
-    },
-  ),
-);
+    void NotificationStorage.update(id, { read: true });
+  },
+
+  markAllAsRead: () => {
+    const notifications = get().notifications;
+
+    set({
+      notifications: notifications.map((n) => ({ ...n, read: true })),
+    });
+
+    void Promise.all(
+      notifications
+        .filter((n) => !n.read)
+        .map((n) => NotificationStorage.update(n.id, { read: true })),
+    );
+  },
+
+  clearAll: async () => {
+    await NotificationStorage.clearAll();
+    set({ notifications: [] });
+  },
+
+  setIsOpen: (isOpen) => {
+    set({ isOpen });
+    // Mark all as read when opening panel
+    if (isOpen) {
+      get().markAllAsRead();
+    }
+  },
+
+  togglePanel: () => {
+    const newIsOpen = !get().isOpen;
+    set({ isOpen: newIsOpen });
+    // Mark all as read when opening panel
+    if (newIsOpen) {
+      get().markAllAsRead();
+    }
+  },
+
+  getUnreadCount: () => {
+    return get().notifications.filter((n) => !n.read).length;
+  },
+
+  getNotificationById: (id) => {
+    return get().notifications.find((n) => n.id === id);
+  },
+}));
 
 // Selector hooks for better performance
 export const useNotifications = () =>
@@ -137,6 +153,12 @@ export const useUnreadCount = () =>
 
 export const useIsNotificationPanelOpen = () =>
   useNotificationStore((state) => state.isOpen);
+
+export const useNotificationsLoaded = () =>
+  useNotificationStore((state) => state.isLoaded);
+
+export const useLoadNotifications = () =>
+  useNotificationStore((state) => state.loadNotifications);
 
 export const useAddNotification = () =>
   useNotificationStore((state) => state.addNotification);

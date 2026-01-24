@@ -1,4 +1,4 @@
-import { History, Search } from "lucide-react";
+import { History, Search, LayoutDashboard } from "lucide-react";
 import { ThemeToggle } from "../../theme-toggle";
 import { NetworkToggle } from "../../network-toggle";
 import { NotificationBell } from "~/components/notifications";
@@ -14,11 +14,6 @@ export const HEADER_CONTROLS_CONFIG: HeaderControlItem[] = [
     ariaLabel: "Transaction History",
     visibleBreakpoint: "mobile",
   },
-  {
-    id: "divider-1",
-    type: "divider",
-    visibleBreakpoint: "mobile",
-  },
 
   // Network toggle
   {
@@ -26,20 +21,12 @@ export const HEADER_CONTROLS_CONFIG: HeaderControlItem[] = [
     type: "component",
     component: NetworkToggle,
   },
-  {
-    id: "divider-2",
-    type: "divider",
-  },
 
   // Theme toggle
   {
     id: "theme-toggle",
     type: "component",
     component: ThemeToggle,
-  },
-  {
-    id: "divider-3",
-    type: "divider",
   },
 
   // Search / Command Palette
@@ -50,9 +37,14 @@ export const HEADER_CONTROLS_CONFIG: HeaderControlItem[] = [
     onClick: (props) => props.onOpenCommandPalette(),
     ariaLabel: "Open command palette",
   },
+
+  // Stats
   {
-    id: "divider-4",
-    type: "divider",
+    id: "stats",
+    type: "icon-button",
+    icon: LayoutDashboard,
+    onClick: (props) => props.onToggleStats(),
+    ariaLabel: "Bridge Stats",
   },
 
   // Notifications
@@ -61,14 +53,20 @@ export const HEADER_CONTROLS_CONFIG: HeaderControlItem[] = [
     type: "component",
     component: NotificationBell,
   },
-  {
-    id: "divider-5",
-    type: "divider",
-  },
 
-  // Wallet button (special handling for connected/disconnected)
+  // Wallet button
   {
     id: "wallet",
     type: "wallet",
   },
 ];
+
+// Map for O(1) lookup by ID
+export const HEADER_CONTROLS_MAP = new Map<string, HeaderControlItem>(
+  HEADER_CONTROLS_CONFIG.map((control) => [control.id, control]),
+);
+
+// Get control by ID
+export function getHeaderControl(id: string): HeaderControlItem | undefined {
+  return HEADER_CONTROLS_MAP.get(id);
+}

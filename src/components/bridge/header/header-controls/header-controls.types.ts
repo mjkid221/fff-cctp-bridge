@@ -16,6 +16,7 @@ export interface HeaderControlItem {
 
   // For "icon-button" type
   icon?: ComponentType<{ className?: string }>;
+  iconClassName?: string; // Additional classes for the icon (e.g., positioning adjustments)
   badge?: string | ((props: BridgeHeaderViewProps) => string);
   onClick?: (props: BridgeHeaderViewProps) => void;
   ariaLabel?: string;

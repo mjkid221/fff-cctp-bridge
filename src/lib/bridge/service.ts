@@ -1,7 +1,19 @@
-import { BridgeKit, type BridgeResult } from "@circle-fin/bridge-kit";
+import {
+  BridgeKit,
+  resolveChainIdentifier,
+  type BridgeResult,
+} from "@circle-fin/bridge-kit";
 import type { AdapterContext } from "@circle-fin/bridge-kit";
 import { nanoid } from "nanoid";
+import {
+  createWalletClient,
+  custom,
+  encodeFunctionData,
+  defineChain,
+  type Chain,
+} from "viem";
 import type { IWallet } from "~/lib/wallet/types";
+import type { AttestationMessage } from "./attestation";
 import type {
   BridgeEstimate,
   BridgeParams,
@@ -22,6 +34,87 @@ import { getBalanceService, type BalanceService } from "./balance/service";
 import { getAttestationTime } from "./attestation-times";
 import { BridgeEventManager } from "./event-manager";
 import { useBridgeStore } from "./store";
+import { fetchAttestation, requestReAttestation } from "./attestation";
+import { getViemChain } from "./chain-utils";
+
+/**
+ * Get CCTP configuration for a chain from the SDK
+ * Returns contract addresses, chain ID, and RPC endpoints
+ */
+function getChainCctpConfig(chainId: SupportedChainId) {
+  try {
+    const chainDef = resolveChainIdentifier(chainId);
+
+    if (!chainDef.cctp?.contracts?.v2) {
+      return null;
+    }
+
+    const v2Contracts = chainDef.cctp.contracts.v2;
+
+    // Handle both 'split' and 'unified' contract types
+    const messageTransmitter =
+      "messageTransmitter" in v2Contracts
+        ? v2Contracts.messageTransmitter
+        : null;
+
+    if (!messageTransmitter) {
+      return null;
+    }
+
+    return {
+      messageTransmitter: messageTransmitter as `0x${string}`,
+      chainId: chainDef.type === "evm" ? chainDef.chainId : null,
+      rpcEndpoints: chainDef.rpcEndpoints,
+      name: chainDef.name,
+      nativeCurrency: chainDef.nativeCurrency,
+    };
+  } catch (error) {
+    console.error(`[Recovery] Failed to resolve chain ${chainId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Create a viem chain definition from SDK chain config
+ */
+function createViemChainFromSdk(chainId: SupportedChainId): Chain | null {
+  const config = getChainCctpConfig(chainId);
+  if (!config?.chainId) {
+    return null;
+  }
+
+  const network = NETWORK_CONFIGS[chainId];
+
+  return defineChain({
+    id: config.chainId,
+    name: config.name,
+    nativeCurrency: config.nativeCurrency,
+    rpcUrls: {
+      default: { http: [...config.rpcEndpoints] },
+    },
+    blockExplorers: network
+      ? {
+          default: { name: "Explorer", url: network.explorerUrl },
+        }
+      : undefined,
+  });
+}
+
+/**
+ * MessageTransmitter ABI for receiveMessage function
+ */
+const MESSAGE_TRANSMITTER_ABI = [
+  {
+    inputs: [
+      { name: "message", type: "bytes" },
+      { name: "attestation", type: "bytes" },
+    ],
+    name: "receiveMessage",
+    outputs: [{ name: "success", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
 
 /**
  * Bridge service configuration
@@ -47,6 +140,10 @@ interface BridgeOperationContext {
   transferSpeed: "FAST" | "SLOW";
   fromAdapter: AdapterContext["adapter"];
   toAdapter: AdapterContext["adapter"];
+  /** Actual wallet address on source chain */
+  sourceAddress: string;
+  /** Actual wallet address on destination chain */
+  destinationAddress: string;
 }
 
 /**
@@ -195,6 +292,40 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   /**
+   * Get the wallet address for a specific chain
+   * Returns the address of the provided wallet or finds a compatible wallet
+   */
+  private getWalletAddressForChain(
+    chain: SupportedChainId,
+    wallet?: IWallet,
+  ): string {
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    // Use provided wallet or find a compatible one
+    const targetWallet =
+      wallet ??
+      this.wallets.find((w) => {
+        try {
+          const creator = this.adapterFactory.getCreator(network.type);
+          return creator?.canHandle(w) ?? false;
+        } catch {
+          return false;
+        }
+      });
+
+    if (!targetWallet) {
+      throw new Error(
+        `No compatible wallet for ${network.type} network. Please connect a ${network.type.toUpperCase()} wallet first.`,
+      );
+    }
+
+    return targetWallet.address;
+  }
+
+  /**
    * Get USDC balance for a specific chain
    */
   async getBalance(chain: SupportedChainId): Promise<TokenBalance> {
@@ -202,8 +333,31 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Service not initialized");
     }
 
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    // Find the compatible wallet for this chain type to get the correct address
+    const compatibleWallet = this.wallets.find((w) => {
+      try {
+        const creator = this.adapterFactory.getCreator(network.type);
+        return creator?.canHandle(w) ?? false;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!compatibleWallet) {
+      throw new Error(`No compatible wallet for ${network.type} network`);
+    }
+
     const adapter = await this.getAdapterForChain(chain);
-    return this.balanceService.getUSDCBalance(adapter, chain, this.userAddress);
+    return this.balanceService.getUSDCBalance(
+      adapter,
+      chain,
+      compatibleWallet.address,
+    );
   }
 
   /**
@@ -310,6 +464,24 @@ export class CCTPBridgeService implements IBridgeService {
 
     const context = await this.createOperationContext(params);
     const transaction = this.createInitialTransaction(context);
+
+    // Capture provider fee for fast transfers (for auditing/stats)
+    if (params.transferMethod === "fast") {
+      try {
+        const estimate = await this.estimate(params);
+        if (estimate.providerFees?.length) {
+          const totalProviderFee = estimate.providerFees.reduce(
+            (sum, fee) => sum + parseFloat(fee.amount),
+            0,
+          );
+          transaction.providerFeeUsdc = totalProviderFee.toString();
+        }
+      } catch {
+        // Non-critical: continue without fee tracking if estimate fails
+        console.warn("[Bridge] Failed to capture provider fee for tracking");
+      }
+    }
+
     await this.storage.saveTransaction(transaction);
 
     // Set current transaction before starting so event callbacks can update it
@@ -366,6 +538,36 @@ export class CCTPBridgeService implements IBridgeService {
     const fromAdapter = await this.getAdapterForChain(originalTx.fromChain);
     const toAdapter = await this.getAdapterForChain(originalTx.toChain);
     const bridgeResult = originalTx.bridgeResult as BridgeResult;
+
+    // Ensure destination chain is added BEFORE Bridge Kit execution
+    // This is critical because Bridge Kit uses raw EIP-1193 provider directly
+    await this.ensureDestinationChainReady(originalTx.toChain);
+
+    // Determine which chain to switch to based on transaction state
+    // If approve/burn steps are incomplete, we need source chain; otherwise destination for mint
+    const needsSourceChain = originalTx.steps.some(
+      (step) =>
+        (step.name.toLowerCase() === "approve" ||
+          step.name.toLowerCase() === "burn") &&
+        step.status !== "completed",
+    );
+
+    if (needsSourceChain) {
+      // Switch to source chain for approve/burn retry
+      const fromNetwork = NETWORK_CONFIGS[originalTx.fromChain];
+      if (fromNetwork.type === "evm" && fromNetwork.evmChainId) {
+        const evmWallet = this.wallets.find((w) => w.chainType === "evm");
+        if (evmWallet) {
+          await EVMAdapterCreator.switchNetwork(
+            evmWallet,
+            fromNetwork.evmChainId,
+            originalTx.fromChain,
+          );
+        }
+      }
+      // Solana doesn't require explicit network switching
+    }
+    // No else needed - Bridge Kit will handle switching to destination for mint
 
     // Reuse existing transaction to keep same ID for windows and event tracking
     const transaction = originalTx;
@@ -440,6 +642,501 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   /**
+   * Resume an in-progress transaction after page refresh.
+   * This is used to continue attestation polling and bridge completion
+   * when the page is refreshed during an active bridge operation.
+   *
+   * @param transactionId - ID of the transaction to resume
+   * @returns The resumed transaction (updated as it progresses)
+   */
+  async resume(transactionId: string): Promise<BridgeTransaction> {
+    if (!this.userAddress) {
+      throw new Error("Bridge service not initialized");
+    }
+
+    const transaction = await this.storage.getTransaction(transactionId);
+    if (!transaction) {
+      throw new Error(`Transaction not found: ${transactionId}`);
+    }
+
+    if (transaction.userAddress !== this.userAddress) {
+      throw new Error("Transaction does not belong to current user");
+    }
+
+    // Only allow resuming in-progress transactions
+    const resumableStatuses = [
+      "bridging",
+      "confirming",
+      "pending",
+      "approving",
+      "approved",
+    ];
+    if (!resumableStatuses.includes(transaction.status)) {
+      if (transaction.status === "completed") {
+        // Already done, just return it
+        return transaction;
+      }
+      if (transaction.status === "failed") {
+        throw new Error("Use retry() for failed transactions");
+      }
+      throw new Error(
+        `Cannot resume transaction with status: ${transaction.status}`,
+      );
+    }
+
+    // Must have bridgeResult to resume (this contains the state needed by Bridge Kit)
+    if (!transaction.bridgeResult) {
+      throw new Error(
+        "Cannot resume: no bridge result stored. Transaction may need to be restarted.",
+      );
+    }
+
+    const fromAdapter = await this.getAdapterForChain(transaction.fromChain);
+    const toAdapter = await this.getAdapterForChain(transaction.toChain);
+    const bridgeResult = transaction.bridgeResult as BridgeResult;
+
+    // Ensure destination chain is added BEFORE Bridge Kit execution
+    // This is critical because Bridge Kit uses raw EIP-1193 provider directly
+    await this.ensureDestinationChainReady(transaction.toChain);
+
+    // Determine which chain to switch to based on transaction state
+    // If approve/burn steps are incomplete, we need source chain; otherwise destination for mint
+    const needsSourceChain = transaction.steps.some(
+      (step) =>
+        (step.name.toLowerCase() === "approve" ||
+          step.name.toLowerCase() === "burn") &&
+        step.status !== "completed",
+    );
+
+    if (needsSourceChain) {
+      // Switch to source chain for remaining source operations
+      const fromNetwork = NETWORK_CONFIGS[transaction.fromChain];
+      if (fromNetwork.type === "evm" && fromNetwork.evmChainId) {
+        const evmWallet = this.wallets.find((w) => w.chainType === "evm");
+        if (evmWallet) {
+          await EVMAdapterCreator.switchNetwork(
+            evmWallet,
+            fromNetwork.evmChainId,
+            transaction.fromChain,
+          );
+        }
+      }
+      // Solana doesn't require explicit network switching
+    }
+    // No else needed - Bridge Kit will handle switching to destination for mint
+
+    // Update store to indicate we're resuming
+    useBridgeStore.getState().setCurrentTransaction(transaction);
+
+    // Set up event tracking for real-time updates
+    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
+      this.syncTransactionState(updatedTx);
+    });
+
+    try {
+      // Use kit.retry() to continue from where we left off
+      // Bridge Kit's retry handles resumption internally based on bridgeResult state
+      const retryResult = await this.kit.retry(bridgeResult, {
+        from: fromAdapter,
+        to: toAdapter,
+      });
+
+      transaction.bridgeResult = retryResult;
+      await this.processBridgeResult(transaction, retryResult);
+    } catch (error) {
+      // If retry throws, handle the error but keep transaction resumable if possible
+      await this.handleBridgeError(transaction, error);
+    } finally {
+      this.eventManager.untrackTransaction(transaction.id);
+    }
+
+    transaction.updatedAt = Date.now();
+    await this.storage.saveTransaction(transaction);
+    this.syncTransactionState(transaction);
+
+    return transaction;
+  }
+
+  /**
+   * Recover a stuck transaction without bridgeResult.
+   * Uses Circle's IRIS API directly to fetch attestation and execute mint,
+   * bypassing kit.retry() entirely.
+   *
+   * This handles the case where user refreshes during attestation polling
+   * and bridgeResult was never saved (it only exists after kit.bridge() completes).
+   *
+   * @param transactionId - ID of the transaction to recover
+   * @returns The recovered transaction (updated as it progresses)
+   */
+  async recover(transactionId: string): Promise<BridgeTransaction> {
+    if (!this.userAddress) {
+      throw new Error("Bridge service not initialized");
+    }
+
+    const transaction = await this.storage.getTransaction(transactionId);
+    if (!transaction) {
+      throw new Error(`Transaction not found: ${transactionId}`);
+    }
+
+    if (transaction.userAddress !== this.userAddress) {
+      throw new Error("Transaction does not belong to current user");
+    }
+
+    // Guard: Early exit for terminal states to prevent repeated calls
+    if (
+      transaction.status === "completed" ||
+      transaction.status === "cancelled"
+    ) {
+      console.log(
+        "[Recovery] Skipping - transaction already in terminal state:",
+        transaction.status,
+      );
+      return transaction;
+    }
+
+    // Only recover in-progress transactions
+    const recoverableStatuses = [
+      "bridging",
+      "confirming",
+      "pending",
+      "approving",
+      "approved",
+    ];
+    if (!recoverableStatuses.includes(transaction.status)) {
+      if (transaction.status === "failed") {
+        throw new Error("Use retry() for failed transactions");
+      }
+      throw new Error(
+        `Cannot recover transaction with status: ${transaction.status}`,
+      );
+    }
+
+    // If we have bridgeResult, use resume() instead
+    if (transaction.bridgeResult) {
+      return this.resume(transactionId);
+    }
+
+    // Must have burn step completed to recover (need the burn tx hash)
+    const burnStep = transaction.steps.find((s) => s.id === "burn");
+    if (!burnStep?.txHash) {
+      throw new Error(
+        "Cannot recover: burn step incomplete. Transaction may need to be restarted.",
+      );
+    }
+
+    // Get chain configs
+    const fromConfig = NETWORK_CONFIGS[transaction.fromChain];
+    const toConfig = NETWORK_CONFIGS[transaction.toChain];
+
+    if (!fromConfig || !toConfig) {
+      throw new Error("Invalid chain configuration");
+    }
+
+    const isTestnet = fromConfig.environment === "testnet";
+    const sourceDomain = fromConfig.cctpDomain;
+
+    if (sourceDomain === undefined) {
+      throw new Error(
+        `CCTP domain not configured for ${transaction.fromChain}`,
+      );
+    }
+
+    // Update store to indicate we're recovering
+    useBridgeStore.getState().setCurrentTransaction(transaction);
+
+    console.log("[Recovery] Starting recovery for transaction", {
+      transactionId,
+      burnTxHash: burnStep.txHash,
+      sourceDomain,
+      isTestnet,
+    });
+
+    try {
+      // Update attestation step to in_progress
+      const attestationStep = transaction.steps.find(
+        (s) => s.id === "attestation",
+      );
+      if (attestationStep) {
+        attestationStep.status = "in_progress";
+        await this.storage.saveTransaction(transaction);
+        this.syncTransactionState(transaction);
+      }
+
+      // 1. Fetch attestation from IRIS API
+      let attestation = await fetchAttestation(
+        sourceDomain,
+        burnStep.txHash,
+        isTestnet,
+      );
+
+      // 2. Handle expired attestation - request re-attestation
+      if (attestation?.status === "expired") {
+        console.log(
+          "[Recovery] Attestation expired, requesting re-attestation",
+        );
+        await requestReAttestation(attestation.decodedMessage.nonce, isTestnet);
+        // Poll again for fresh attestation
+        attestation = await fetchAttestation(
+          sourceDomain,
+          burnStep.txHash,
+          isTestnet,
+        );
+      }
+
+      if (attestation?.status !== "complete") {
+        throw new Error(
+          "Attestation not ready yet. Please try again in a few minutes.",
+        );
+      }
+
+      // Mark attestation step complete
+      if (attestationStep) {
+        attestationStep.status = "completed";
+        attestationStep.timestamp = Date.now();
+        transaction.attestationHash = attestation.attestation;
+        await this.storage.saveTransaction(transaction);
+        this.syncTransactionState(transaction);
+      }
+
+      console.log("[Recovery] Attestation fetched successfully", {
+        status: attestation.status,
+        hasMessage: !!attestation.message,
+        hasAttestation: !!attestation.attestation,
+      });
+
+      // 3. Execute mint based on destination chain type
+      const mintStep = transaction.steps.find((s) => s.id === "mint");
+      if (mintStep) {
+        mintStep.status = "in_progress";
+        await this.storage.saveTransaction(transaction);
+        this.syncTransactionState(transaction);
+      }
+
+      let mintTxHash: string;
+      switch (toConfig.type) {
+        case "evm":
+          // Execute receiveMessage (mint) directly on destination chain
+          mintTxHash = await this.executeReceiveMessage(
+            transaction.toChain,
+            attestation.message,
+            attestation.attestation,
+          );
+          console.log("[Recovery] EVM mint executed successfully", {
+            mintTxHash,
+          });
+          break;
+
+        case "solana":
+          // Execute receiveMessage via Solana adapter
+          mintTxHash = await this.executeSolanaReceiveMessage(
+            transaction,
+            attestation,
+          );
+          console.log("[Recovery] Solana mint executed successfully", {
+            mintTxHash,
+          });
+          break;
+
+        case "sui":
+          // TODO: Implement SUI mint execution when SUI adapter is available
+          throw new Error("SUI recovery not yet implemented");
+
+        default: {
+          const _exhaustive: never = toConfig.type;
+          throw new Error(
+            `Unsupported destination chain type: ${String(_exhaustive)}`,
+          );
+        }
+      }
+
+      // 4. Update transaction as completed
+      if (mintStep) {
+        mintStep.status = "completed";
+        mintStep.txHash = mintTxHash;
+        mintStep.timestamp = Date.now();
+      }
+      transaction.destinationTxHash = mintTxHash;
+      transaction.status = "completed";
+      transaction.completedAt = Date.now();
+    } catch (error) {
+      // Mark transaction as failed but keep it recoverable
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown recovery error";
+      transaction.error = errorMessage;
+
+      // Only mark as failed if it's a permanent error
+      if (!errorMessage.includes("not ready yet")) {
+        transaction.status = "failed";
+        const mintStep = transaction.steps.find((s) => s.id === "mint");
+        if (mintStep?.status === "in_progress") {
+          mintStep.status = "failed";
+          mintStep.error = errorMessage;
+        }
+      }
+
+      console.error("[Recovery] Failed:", error);
+    }
+
+    transaction.updatedAt = Date.now();
+    await this.storage.saveTransaction(transaction);
+    this.syncTransactionState(transaction);
+
+    return transaction;
+  }
+
+  /**
+   * Execute receiveMessage on the destination chain's MessageTransmitter contract.
+   * This mints USDC by providing the CCTP message and Circle's attestation.
+   */
+  private async executeReceiveMessage(
+    destinationChain: SupportedChainId,
+    message: string,
+    attestation: string,
+  ): Promise<string> {
+    // Get CCTP config from SDK
+    const cctpConfig = getChainCctpConfig(destinationChain);
+    if (!cctpConfig) {
+      throw new Error(
+        `CCTP not supported for ${destinationChain}. Chain may not have CCTP v2 configured.`,
+      );
+    }
+
+    const viemChain = createViemChainFromSdk(destinationChain);
+    if (!viemChain) {
+      throw new Error(`Failed to create viem chain for ${destinationChain}`);
+    }
+
+    const network = NETWORK_CONFIGS[destinationChain];
+    if (!network) {
+      throw new Error(`Network config not found for ${destinationChain}`);
+    }
+
+    // Find the compatible EVM wallet for the destination chain
+    const evmWallet = this.wallets.find((w) => {
+      try {
+        const creator = this.adapterFactory.getCreator(network.type);
+        return creator?.canHandle(w) ?? false;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!evmWallet) {
+      throw new Error("No EVM wallet connected for destination chain");
+    }
+
+    // Switch wallet to destination chain before executing receiveMessage
+    // This is critical after page refresh when wallet may be on wrong network
+    if (network.evmChainId) {
+      await EVMAdapterCreator.switchNetwork(
+        evmWallet,
+        network.evmChainId,
+        destinationChain,
+      );
+    }
+
+    // Get the EIP-1193 provider from the wallet using IWallet interface
+    if (!evmWallet.getEVMProvider) {
+      throw new Error("Wallet does not support EVM provider");
+    }
+    const provider = await evmWallet.getEVMProvider();
+
+    // Create viem wallet client
+    const walletClient = createWalletClient({
+      chain: viemChain,
+      transport: custom(provider as Parameters<typeof custom>[0]),
+    });
+
+    // Get the account address
+    const [account] = await walletClient.getAddresses();
+    if (!account) {
+      throw new Error("No account available in wallet");
+    }
+
+    // Encode the function call
+    const data = encodeFunctionData({
+      abi: MESSAGE_TRANSMITTER_ABI,
+      functionName: "receiveMessage",
+      args: [message as `0x${string}`, attestation as `0x${string}`],
+    });
+
+    // Send the transaction
+    const txHash = await walletClient.sendTransaction({
+      account,
+      to: cctpConfig.messageTransmitter,
+      data,
+      chain: viemChain,
+    });
+
+    return txHash;
+  }
+
+  /**
+   * Execute receiveMessage on Solana via the adapter's CCTP action.
+   * Uses the Circle Solana adapter's built-in receiveMessage implementation
+   * which handles all the complex PDA derivation and instruction building.
+   */
+  private async executeSolanaReceiveMessage(
+    transaction: BridgeTransaction,
+    attestation: AttestationMessage,
+  ): Promise<string> {
+    const fromConfig = NETWORK_CONFIGS[transaction.fromChain];
+    const toConfig = NETWORK_CONFIGS[transaction.toChain];
+
+    if (!fromConfig || !toConfig) {
+      throw new Error("Invalid chain configuration for Solana mint");
+    }
+
+    // Get the Solana adapter
+    const solanaAdapter = await this.getAdapterForChain(transaction.toChain);
+
+    console.log("[Recovery] Executing Solana receiveMessage", {
+      fromChain: transaction.fromChain,
+      toChain: transaction.toChain,
+      eventNonce: attestation.eventNonce,
+    });
+
+    // Resolve chain identifiers to ChainDefinition objects
+    // The adapter expects ChainDefinitionWithCCTPv2, not string IDs
+    // Our supported chains all have CCTP v2 support, so the cast is safe
+    // ChainDefinitionWithCCTPv2 is not exported from bridge-kit, so we use any
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+    const fromChainDef = resolveChainIdentifier(transaction.fromChain) as any;
+    const toChainDef = resolveChainIdentifier(transaction.toChain) as any;
+
+    // Prepare the receiveMessage action using the adapter
+    // The adapter handles all the complex Solana-specific logic:
+    // - PDA derivation (message_transmitter, token_messenger, etc.)
+    // - Anchor instruction building
+    // - Account resolution
+    const prepared = await solanaAdapter.prepareAction(
+      "cctp.v2.receiveMessage",
+      {
+        fromChain: fromChainDef,
+        toChain: toChainDef,
+        message: attestation.message,
+        attestation: attestation.attestation,
+        eventNonce: attestation.eventNonce,
+      },
+      // Operation context - chain is required for the adapter
+      { chain: toChainDef },
+    );
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
+    // Execute the prepared transaction
+    // execute() returns the transaction signature (hash) directly as a string
+    const txHash = await prepared.execute();
+
+    if (!txHash) {
+      throw new Error(
+        "Solana receiveMessage execution failed: no transaction hash returned",
+      );
+    }
+
+    return txHash;
+  }
+
+  /**
    * Get transaction by ID
    */
   async getTransaction(
@@ -487,6 +1184,48 @@ export class CCTPBridgeService implements IBridgeService {
   // ==================== Private Helper Methods ====================
 
   /**
+   * Ensure the destination chain is added to the wallet before Bridge Kit tries to use it.
+   * This ONLY adds the chain - it does NOT switch to it.
+   * Bridge Kit will handle switching to the destination chain during the mint step.
+   */
+  private async ensureDestinationChainReady(
+    toChain: SupportedChainId,
+  ): Promise<void> {
+    const toNetwork = NETWORK_CONFIGS[toChain];
+
+    if (toNetwork.type !== "evm" || !toNetwork.evmChainId) {
+      // Non-EVM chains don't need this
+      return;
+    }
+
+    const evmWallet = this.wallets.find((w) => w.chainType === "evm");
+    if (!evmWallet?.addChain) {
+      return;
+    }
+
+    // Get the viem chain config for this destination
+    const viemChain = getViemChain(toChain);
+    if (!viemChain) {
+      console.warn(
+        `[Bridge] No viem chain config for ${toChain}, skipping pre-add`,
+      );
+      return;
+    }
+
+    try {
+      // ONLY add the chain - do NOT switch to it
+      // wallet_addEthereumChain will no-op if chain already exists in most wallets
+      await evmWallet.addChain(viemChain);
+      console.log(
+        `[Bridge] Destination chain ${toChain} (${toNetwork.evmChainId}) added to wallet`,
+      );
+    } catch (error) {
+      // Log but don't fail - chain might already exist, or Bridge Kit can try later
+      console.warn(`[Bridge] Failed to pre-add destination chain:`, error);
+    }
+  }
+
+  /**
    * Validate bridge parameters
    */
   private validateBridgeParams(params: BridgeParams): void {
@@ -529,24 +1268,59 @@ export class CCTPBridgeService implements IBridgeService {
     const fromNetwork = NETWORK_CONFIGS[params.fromChain];
     const toNetwork = NETWORK_CONFIGS[params.toChain];
 
-    // Switch EVM wallets to correct network before creating adapters
-    if (toNetwork.type === "evm" && toNetwork.evmChainId && params.destWallet) {
-      await EVMAdapterCreator.switchNetwork(
-        params.destWallet,
-        toNetwork.evmChainId,
-      );
+    // Switch wallets to correct network before creating adapters
+    // Source network switching FIRST - user needs this for approve/burn steps
+    if (params.sourceWallet) {
+      switch (fromNetwork.type) {
+        case "evm":
+          if (fromNetwork.evmChainId) {
+            await EVMAdapterCreator.switchNetwork(
+              params.sourceWallet,
+              fromNetwork.evmChainId,
+              params.fromChain,
+            );
+          }
+          break;
+        case "solana":
+          // Solana doesn't require explicit network switching
+          break;
+        case "sui":
+          // TODO: Add SUI network switching when SUI adapter is available
+          break;
+      }
     }
 
-    if (
-      fromNetwork.type === "evm" &&
-      fromNetwork.evmChainId &&
-      params.sourceWallet
-    ) {
-      await EVMAdapterCreator.switchNetwork(
-        params.sourceWallet,
-        fromNetwork.evmChainId,
-      );
+    // Destination network switching SECOND (for mint step, handled later by Bridge Kit)
+    // Only switch if different wallet, otherwise Bridge Kit will handle mint step switching
+    if (params.destWallet && params.destWallet !== params.sourceWallet) {
+      switch (toNetwork.type) {
+        case "evm":
+          if (toNetwork.evmChainId) {
+            await EVMAdapterCreator.switchNetwork(
+              params.destWallet,
+              toNetwork.evmChainId,
+              params.toChain,
+            );
+          }
+          break;
+        case "solana":
+          // Solana doesn't require explicit network switching
+          break;
+        case "sui":
+          // TODO: Add SUI network switching when SUI adapter is available
+          break;
+      }
     }
+
+    // Get wallet addresses for source and destination chains
+    // These may differ from userAddress when bridging between EVM and Solana
+    const sourceAddress = this.getWalletAddressForChain(
+      params.fromChain,
+      params.sourceWallet,
+    );
+    const destinationAddress =
+      params.recipientAddress ??
+      this.getWalletAddressForChain(params.toChain, params.destWallet);
 
     // Create adapters using explicit wallets if provided
     const fromAdapter = await this.getAdapterForChainWithWallet(
@@ -569,6 +1343,8 @@ export class CCTPBridgeService implements IBridgeService {
       transferSpeed: getTransferSpeed(params.transferMethod),
       fromAdapter,
       toAdapter,
+      sourceAddress,
+      destinationAddress,
     };
   }
 
@@ -618,6 +1394,11 @@ export class CCTPBridgeService implements IBridgeService {
         context.fromChain,
         context.transferSpeed === "FAST",
       ),
+      // Wallet addresses for auditing (actual chain-specific addresses)
+      sourceAddress: context.sourceAddress,
+      destinationAddress: context.destinationAddress,
+      // Transfer method tracking
+      transferMethod: context.transferSpeed === "FAST" ? "fast" : "standard",
     };
   }
 
@@ -628,6 +1409,10 @@ export class CCTPBridgeService implements IBridgeService {
     context: BridgeOperationContext,
     transaction: BridgeTransaction,
   ): Promise<void> {
+    // Ensure destination chain is added BEFORE Bridge Kit tries to switch to it
+    // This is critical because Bridge Kit uses the raw EIP-1193 provider directly
+    await this.ensureDestinationChainReady(context.toChain);
+
     transaction.status = "bridging";
     const firstStep = transaction.steps[0];
     if (firstStep) {

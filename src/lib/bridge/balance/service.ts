@@ -23,12 +23,18 @@ export class BalanceService {
     const network = NETWORK_CONFIGS[chain];
 
     try {
-      if (network.type === "evm") {
-        return await this.getEVMBalance(adapter, chain, walletAddress);
-      } else if (network.type === "solana") {
-        return await this.getSolanaBalance(adapter, chain, walletAddress);
-      } else {
-        throw new Error(`Unsupported network type: ${String(network.type)}`);
+      switch (network.type) {
+        case "evm":
+          return await this.getEVMBalance(adapter, chain, walletAddress);
+        case "solana":
+          return await this.getSolanaBalance(adapter, chain, walletAddress);
+        case "sui":
+          // TODO: Implement SUI balance fetching when SUI adapter is available
+          throw new Error("SUI balance fetching not yet implemented");
+        default: {
+          const _exhaustive: never = network.type;
+          throw new Error(`Unsupported network type: ${String(_exhaustive)}`);
+        }
       }
     } catch (error) {
       console.error(`Failed to fetch balance for ${chain}:`, error);

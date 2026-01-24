@@ -8,7 +8,7 @@
 /**
  * Tab indices matching the order in dynamic-provider.tsx overrides.views config
  */
-export const NETWORK_TAB_INDEX = {
+const NETWORK_TAB_INDEX = {
   all: 0, // "All chains" tab
   evm: 1, // EthereumIcon tab - FilterChain("EVM")
   solana: 2, // SolanaIcon tab - FilterChain("SOL")

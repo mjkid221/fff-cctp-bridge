@@ -7,6 +7,7 @@
  */
 
 import type { Connection } from "@solana/web3.js";
+import type { Chain } from "viem";
 import { isEthereumWallet } from "@dynamic-labs/ethereum";
 import { isSolanaWallet } from "@dynamic-labs/solana";
 import { isSuiWallet } from "@dynamic-labs/sui";
@@ -23,6 +24,7 @@ import type {
   SolanaWalletProvider,
 } from "../../types";
 import { DynamicSolanaWalletAdapter } from "~/lib/solana/provider";
+import { getViemChainByEvmId } from "~/lib/bridge/chain-utils";
 
 /**
  * Type alias for Dynamic's wallet type
@@ -138,19 +140,91 @@ export class DynamicWalletWrapper implements IWallet {
 
   /**
    * Switch the wallet to a different network
+   * If the chain isn't configured in the wallet, automatically adds it first
    */
   async switchNetwork(chainId: number | string): Promise<void> {
     const numericChainId =
       typeof chainId === "string" ? parseInt(chainId, 10) : chainId;
 
     // switchNetwork is available on most wallet types
-    if (typeof this._dynamicWallet.switchNetwork === "function") {
-      await this._dynamicWallet.switchNetwork(numericChainId);
-    } else {
+    if (typeof this._dynamicWallet.switchNetwork !== "function") {
       throw new Error(
         `Wallet ${this.connectorKey} does not support network switching`,
       );
     }
+
+    try {
+      await this._dynamicWallet.switchNetwork(numericChainId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      // Check if error is "unrecognized chain" - wallet doesn't have this chain configured
+      const isUnrecognizedChain =
+        message.includes("Unrecognized chain") ||
+        message.includes("wallet_addEthereumChain") ||
+        message.includes("chain has not been added") ||
+        message.includes("Try adding the chain");
+
+      if (isUnrecognizedChain && this._chainType === "evm") {
+        console.log(
+          `[DynamicWallet] Chain ${numericChainId} not found, attempting to add...`,
+        );
+
+        // Look up viem chain by numeric ID
+        const viemChain = getViemChainByEvmId(numericChainId);
+        if (!viemChain) {
+          throw new Error(
+            `Failed to add chain ${numericChainId}: chain config not available`,
+          );
+        }
+
+        // Add chain to wallet then retry switch
+        await this.addChain(viemChain);
+        console.log(
+          `[DynamicWallet] Chain ${numericChainId} added, switching...`,
+        );
+
+        await this._dynamicWallet.switchNetwork(numericChainId);
+        console.log(
+          `[DynamicWallet] Successfully added and switched to chain ${numericChainId}`,
+        );
+        return;
+      }
+
+      // Re-throw other errors
+      throw error;
+    }
+  }
+
+  /**
+   * Add a new chain to the wallet using wallet_addEthereumChain
+   * This is called when switchNetwork fails because the chain isn't configured
+   */
+  async addChain(chain: Chain): Promise<void> {
+    if (this._chainType !== "evm") {
+      throw new Error(`Cannot add chain to ${this._chainType} wallet`);
+    }
+
+    const provider = await this.getEVMProvider();
+
+    // Format chain ID as hex string per EIP-3085
+    const chainIdHex = `0x${chain.id.toString(16)}`;
+
+    // Build the AddEthereumChainParameter object per EIP-3085
+    const addChainParams = {
+      chainId: chainIdHex,
+      chainName: chain.name,
+      nativeCurrency: chain.nativeCurrency,
+      rpcUrls: chain.rpcUrls.default.http,
+      blockExplorerUrls: chain.blockExplorers
+        ? [chain.blockExplorers.default.url]
+        : undefined,
+    };
+
+    await provider.request({
+      method: "wallet_addEthereumChain",
+      params: [addChainParams],
+    });
   }
 
   /**

@@ -8,11 +8,19 @@ export interface BridgeHeaderViewProps {
   showTransactionHistory: boolean;
   showDisclaimer: boolean;
   showPongGame: boolean;
+  showStats: boolean;
   showExplainer: boolean;
   commandPaletteOpen: boolean;
 
   // Environment
   environment: "mainnet" | "testnet";
+
+  // Header control order (for drag-to-reorder)
+  headerControlOrder: string[];
+  onReorderHeaderControls: (order: string[]) => void;
+  isDraggingControls: boolean;
+  onDragStartControls: () => void;
+  onDragEndControls: () => void;
 
   // Actions
   onConnectWallet: () => void;
@@ -22,13 +30,16 @@ export interface BridgeHeaderViewProps {
   onToggleTransactionHistory: () => void;
   onToggleDisclaimer: () => void;
   onTogglePongGame: () => void;
+  onToggleStats: () => void;
   onCloseTransactionHistory: () => void;
   onCloseDisclaimer: () => void;
   onClosePongGame: () => void;
+  onCloseStats: () => void;
   onCloseExplainer: () => void;
   onOpenTransactionHistory: () => void;
   onOpenDisclaimer: () => void;
   onOpenPongGame: () => void;
+  onOpenStats: () => void;
   onOpenExplainer: () => void;
   onOpenCommandPalette: () => void;
   onCloseCommandPalette: () => void;

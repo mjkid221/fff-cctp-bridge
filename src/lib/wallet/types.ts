@@ -6,6 +6,7 @@
  */
 
 import type { Connection } from "@solana/web3.js";
+import type { Chain } from "viem";
 import type { SolanaWalletProvider } from "../solana/provider";
 
 /**
@@ -66,6 +67,14 @@ export interface IWallet {
    * @param chainId - The chain ID to switch to (number for EVM, string for others)
    */
   switchNetwork?(chainId: number | string): Promise<void>;
+
+  /**
+   * Add a new chain to the wallet
+   * Only available for EVM wallets (chainType === 'evm')
+   * Used when wallet_switchEthereumChain fails because the chain isn't configured
+   * @param chain - Viem Chain object with chain configuration
+   */
+  addChain?(chain: Chain): Promise<void>;
 
   /**
    * Check if the wallet is currently connected

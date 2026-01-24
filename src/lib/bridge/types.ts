@@ -62,6 +62,14 @@ export interface BridgeTransaction {
   notificationId?: string; // Link to notification for this transaction
   bridgeResult?: unknown; // Store Bridge Kit result for retry (as unknown since it's from external lib)
   recipientAddress?: string; // Store recipient address for retry
+
+  // Wallet addresses for auditing
+  sourceAddress?: string; // Source chain wallet address
+  destinationAddress?: string; // Destination chain wallet address
+
+  // Transfer method and USDC fee tracking
+  transferMethod?: TransferMethod; // Which mode was used (standard/fast)
+  providerFeeUsdc?: string; // CCTP provider fee in USDC (fast mode only)
 }
 
 /**
@@ -161,6 +169,12 @@ export interface IBridgeService {
    * Retry a failed transaction
    */
   retry(transactionId: string): Promise<BridgeTransaction>;
+
+  /**
+   * Resume an in-progress transaction after page refresh.
+   * This continues attestation polling and bridge completion.
+   */
+  resume(transactionId: string): Promise<BridgeTransaction>;
 
   /**
    * Get transaction by ID

@@ -24,8 +24,8 @@ export function ThemeToggleView({
   return (
     <motion.button
       ref={buttonRef}
-      whileHover={{ backgroundColor: "rgba(0,0,0,0.05)" }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       onClick={toggleTheme}
       aria-label="Toggle theme"
       type="button"

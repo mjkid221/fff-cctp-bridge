@@ -100,6 +100,10 @@ export interface BridgeState {
   showCCTPExplainer: boolean;
   setShowCCTPExplainer: (show: boolean) => void;
 
+  // Header control order (for drag-to-reorder)
+  headerControlOrder: string[];
+  setHeaderControlOrder: (order: string[]) => void;
+
   // Actions
   loadTransactions: () => Promise<void>;
   clearTransactions: () => Promise<void>;
@@ -125,6 +129,15 @@ export const useBridgeStore = create<BridgeState>()(
       error: null,
       hasSeenCCTPExplainer: false,
       showCCTPExplainer: false,
+      headerControlOrder: [
+        "transaction-history-mobile",
+        "network-toggle",
+        "theme-toggle",
+        "search",
+        "stats",
+        "notifications",
+        "wallet",
+      ],
       windowPositions: { ...DEFAULT_WINDOW_POSITIONS },
       windowZIndexes: {
         "fee-details": 100,
@@ -132,6 +145,7 @@ export const useBridgeStore = create<BridgeState>()(
         "bridge-progress": 100,
         disclaimer: 100,
         pong: 100,
+        stats: 100,
       },
 
       // Multi-window transaction state
@@ -197,13 +211,18 @@ export const useBridgeStore = create<BridgeState>()(
 
       // Multi-window transaction management
       openTransactionWindow: (transaction, position) => {
-        const { openTransactionWindows, nextZIndex } = get();
+        const { openTransactionWindows, nextZIndex, transactions } = get();
+
+        // Always use the latest transaction data from the store
+        // This ensures cancelled/completed status is shown correctly
+        const latestTransaction =
+          transactions.find((tx) => tx.id === transaction.id) ?? transaction;
 
         // If window already open, just focus it
         if (openTransactionWindows.has(transaction.id)) {
           get().focusTransactionWindow(transaction.id);
-          // Update transaction data in case it changed
-          get().updateTransactionInWindow(transaction.id, transaction);
+          // Update transaction data with latest from store
+          get().updateTransactionInWindow(transaction.id, latestTransaction);
           return;
         }
 
@@ -216,15 +235,15 @@ export const useBridgeStore = create<BridgeState>()(
         };
 
         const newWindow: TransactionWindow = {
-          transactionId: transaction.id,
-          transaction,
+          transactionId: latestTransaction.id,
+          transaction: latestTransaction,
           position: position ?? defaultPosition,
           zIndex: nextZIndex,
           isMinimized: false,
         };
 
         const newMap = new Map(openTransactionWindows);
-        newMap.set(transaction.id, newWindow);
+        newMap.set(latestTransaction.id, newWindow);
 
         set({
           openTransactionWindows: newMap,
@@ -316,7 +335,6 @@ export const useBridgeStore = create<BridgeState>()(
             return { transactions: updated };
           }
 
-          // Add new transaction to the beginning of the list
           return {
             transactions: [transaction, ...state.transactions],
           };
@@ -331,7 +349,6 @@ export const useBridgeStore = create<BridgeState>()(
           ),
         }));
 
-        // Update in IndexedDB
         const transaction = get().transactions.find((tx) => tx.id === id);
         if (transaction) {
           void BridgeStorage.saveTransaction({
@@ -343,7 +360,6 @@ export const useBridgeStore = create<BridgeState>()(
       },
 
       cancelTransaction: async (id) => {
-        // Update status to "cancelled" in memory
         set((state) => ({
           transactions: state.transactions.map((tx) =>
             tx.id === id
@@ -357,10 +373,8 @@ export const useBridgeStore = create<BridgeState>()(
               : state.currentTransaction,
         }));
 
-        // Close the transaction window if open
         get().closeTransactionWindow(id);
 
-        // Update in IndexedDB
         const transaction = get().transactions.find((tx) => tx.id === id);
         if (transaction) {
           await BridgeStorage.saveTransaction({
@@ -380,6 +394,9 @@ export const useBridgeStore = create<BridgeState>()(
       // CCTP Explainer
       setHasSeenCCTPExplainer: (seen) => set({ hasSeenCCTPExplainer: seen }),
       setShowCCTPExplainer: (show) => set({ showCCTPExplainer: show }),
+
+      // Header control order
+      setHeaderControlOrder: (order) => set({ headerControlOrder: order }),
 
       // Actions
       loadTransactions: async () => {
@@ -416,6 +433,7 @@ export const useBridgeStore = create<BridgeState>()(
         toChain: state.toChain,
         windowPositions: state.windowPositions,
         hasSeenCCTPExplainer: state.hasSeenCCTPExplainer,
+        headerControlOrder: state.headerControlOrder,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
@@ -494,3 +512,9 @@ export const useMinimizeTransactionWindow = () =>
   useBridgeStore((state) => state.minimizeTransactionWindow);
 export const useCancelTransaction = () =>
   useBridgeStore((state) => state.cancelTransaction);
+
+// Header control order hooks
+export const useHeaderControlOrder = () =>
+  useBridgeStore((state) => state.headerControlOrder);
+export const useSetHeaderControlOrder = () =>
+  useBridgeStore((state) => state.setHeaderControlOrder);

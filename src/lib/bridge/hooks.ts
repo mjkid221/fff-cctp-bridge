@@ -18,6 +18,8 @@ import type {
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
 import { bridgeKeys } from "./query-keys";
+import { ms } from "ms-extended";
+import { getWalletsForNetworkType } from "./utils";
 
 /**
  * Custom hook that provides wallets filtered by type
@@ -69,6 +71,8 @@ export function useBridgeInit() {
   }, [primaryWallet, allWallets, setUserAddress, loadTransactions]);
 
   // Auto-load in-progress transaction after page refresh (runs only once)
+  // Note: We load the transaction into state but do NOT auto-open the window
+  // User can access it via transaction history or notifications
   useEffect(() => {
     if (!isInitialized || hasAutoLoadedRef.current) return;
 
@@ -92,10 +96,8 @@ export function useBridgeInit() {
 
         const setCurrentTransaction =
           useBridgeStore.getState().setCurrentTransaction;
-        const setActiveWindow = useBridgeStore.getState().setActiveWindow;
 
         setCurrentTransaction(inProgressTx);
-        setActiveWindow("bridge-progress");
       } else {
         hasAutoLoadedRef.current = true;
       }
@@ -108,33 +110,49 @@ export function useBridgeInit() {
 }
 
 /**
- * Hook for bridge estimation
+ * Hook for bridge estimation with React Query caching
+ * Caches estimates for 10 seconds to avoid redundant API calls on chain switching
  */
-export function useBridgeEstimate() {
-  const [estimate, setEstimate] = useState<BridgeEstimate | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function useBridgeEstimate(params: {
+  fromChain: SupportedChainId | null;
+  toChain: SupportedChainId | null;
+  amount: string;
+  recipientAddress?: string;
+  transferMethod?: string;
+}) {
+  const userAddress = useBridgeStore((state) => state.userAddress);
 
-  const estimateBridge = useCallback(async (params: BridgeParams) => {
-    setIsEstimating(true);
-    setError(null);
+  const { fromChain, toChain, amount, recipientAddress, transferMethod } =
+    params;
+  const hasValidParams =
+    !!fromChain && !!toChain && !!amount && parseFloat(amount) > 0;
 
-    try {
+  return useQuery({
+    queryKey: hasValidParams
+      ? bridgeKeys.estimate({
+          fromChain: fromChain,
+          toChain: toChain,
+          amount,
+          recipientAddress,
+          transferMethod: transferMethod as BridgeParams["transferMethod"],
+        })
+      : bridgeKeys.estimates(), // Fallback key when params invalid
+    queryFn: async () => {
       const service = getBridgeService();
-      const result = await service.estimate(params);
-      setEstimate(result);
-      return result;
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to estimate";
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsEstimating(false);
-    }
-  }, []);
-
-  return { estimate, isEstimating, error, estimateBridge };
+      return service.estimate({
+        fromChain: fromChain!,
+        toChain: toChain!,
+        amount,
+        recipientAddress,
+        transferMethod: transferMethod as BridgeParams["transferMethod"],
+      });
+    },
+    enabled: !!userAddress && hasValidParams,
+    staleTime: ms("10s"), // Circle fees are fixed, no need for frequent refetch
+    gcTime: ms("1m"), // Keep in cache for 1 minute
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 }
 
 /**
@@ -221,6 +239,80 @@ export function useRetryBridge() {
 }
 
 /**
+ * Hook for resuming in-progress transactions after page refresh.
+ * This is used to continue attestation polling when the user
+ * refreshes the page or reopens a transaction window.
+ */
+export function useResumeBridge() {
+  const [isResuming, setIsResuming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const updateTransaction = useBridgeStore((state) => state.updateTransaction);
+
+  const resumeBridge = useCallback(
+    async (transactionId: string): Promise<BridgeTransaction> => {
+      setIsResuming(true);
+      setError(null);
+
+      try {
+        const service = getBridgeService();
+        const transaction = await service.resume(transactionId);
+
+        updateTransaction(transaction.id, transaction);
+
+        return transaction;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Resume failed";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setIsResuming(false);
+      }
+    },
+    [updateTransaction],
+  );
+
+  return { resumeBridge, isResuming, error };
+}
+
+/**
+ * Hook for recovering stuck transactions without bridgeResult.
+ * This handles the case where user refreshes during attestation polling
+ * and bridgeResult was never saved. Uses reconstructed BridgeResult to retry.
+ */
+export function useRecoverBridge() {
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const updateTransaction = useBridgeStore((state) => state.updateTransaction);
+
+  const recoverBridge = useCallback(
+    async (transactionId: string): Promise<BridgeTransaction> => {
+      setIsRecovering(true);
+      setError(null);
+
+      try {
+        const service = getBridgeService();
+        const transaction = await service.recover(transactionId);
+
+        updateTransaction(transaction.id, transaction);
+
+        return transaction;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Recovery failed";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setIsRecovering(false);
+      }
+    },
+    [updateTransaction],
+  );
+
+  return { recoverBridge, isRecovering, error };
+}
+
+/**
  * Hook for wallet balance using React Query
  * Automatically waits for service initialization via the enabled option
  */
@@ -235,10 +327,10 @@ export function useWalletBalance(chainId: SupportedChainId | null) {
       const service = getBridgeService();
       return service.getBalance(chainId!);
     },
-    // CRITICAL: Only fetch when service is initialized (userAddress set)
+    // Only fetch when service is initialized (userAddress set) otherwise throws errors
     enabled: !!userAddress && !!chainId,
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    staleTime: ms("30s"),
+    gcTime: ms("5m"),
     refetchOnWindowFocus: false,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
@@ -446,22 +538,16 @@ export function useWalletSelection(
     ? (NETWORK_CONFIGS[toChain]?.type ?? null)
     : null;
 
-  // Get compatible wallets for each network type using proper type guards
-  const sourceWallets = useMemo(() => {
-    if (!fromNetworkType) return walletsByType.all;
-    if (fromNetworkType === "evm") return walletsByType.ethereum;
-    if (fromNetworkType === "solana") return walletsByType.solana;
-    if (fromNetworkType === "sui") return walletsByType.sui;
-    return [];
-  }, [fromNetworkType, walletsByType]);
+  // Get compatible wallets for each network type
+  const sourceWallets = useMemo(
+    () => getWalletsForNetworkType(fromNetworkType, walletsByType),
+    [fromNetworkType, walletsByType],
+  );
 
-  const destWallets = useMemo(() => {
-    if (!toNetworkType) return walletsByType.all;
-    if (toNetworkType === "evm") return walletsByType.ethereum;
-    if (toNetworkType === "solana") return walletsByType.solana;
-    if (toNetworkType === "sui") return walletsByType.sui;
-    return [];
-  }, [toNetworkType, walletsByType]);
+  const destWallets = useMemo(
+    () => getWalletsForNetworkType(toNetworkType, walletsByType),
+    [toNetworkType, walletsByType],
+  );
 
   // Auto-select source wallet: prefer primary wallet if compatible, else first available
   useEffect(() => {

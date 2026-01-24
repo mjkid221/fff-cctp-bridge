@@ -96,9 +96,9 @@ export function NotificationPanelView({
                       {notifications.map((notification, index) => (
                         <motion.div
                           key={notification.id}
-                          initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-                          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + index * 0.1 }}
                         >
                           <NotificationItem
                             notification={notification}

@@ -30,14 +30,6 @@ export function FeeSummaryCard({
   const toNetwork = toChain ? NETWORK_CONFIGS[toChain] : null;
   const isFast = transferMethod === "fast";
 
-  // Calculate total fees
-  const calculateTotalGasFee = () => {
-    if (!estimate?.detailedGasFees) return "0";
-    return estimate.detailedGasFees
-      .reduce((sum, fee) => sum + parseFloat(fee.fees.fee), 0)
-      .toFixed(6);
-  };
-
   // Calculate CCTP provider fee (only for fast transfers)
   const calculateCctpFee = () => {
     if (!estimate?.providerFees) return "0";
@@ -46,12 +38,9 @@ export function FeeSummaryCard({
       .toFixed(6);
   };
 
-  const totalGasFee = estimate ? calculateTotalGasFee() : "0";
   const cctpFee = estimate ? calculateCctpFee() : "0";
   const hasCctpFee = parseFloat(cctpFee) > 0;
-  const gasToken = estimate?.detailedGasFees?.[0]?.token ?? "ETH";
 
-  // Don't show if no chains selected
   if (!fromChain || !toChain) return null;
 
   return (
@@ -132,21 +121,6 @@ export function FeeSummaryCard({
               </motion.div>
             );
           })}
-
-          {/* Total Network Fees */}
-          <div className="border-border/50 bg-muted/30 flex items-center justify-between rounded-lg border px-3 py-2.5">
-            <span className="text-foreground text-xs font-semibold">
-              Total Network Fees
-            </span>
-            <div className="text-right">
-              <div className="text-foreground font-mono text-sm font-semibold">
-                {parseFloat(totalGasFee).toFixed(6)}
-              </div>
-              <div className="text-muted-foreground text-[10px]">
-                {gasToken}
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

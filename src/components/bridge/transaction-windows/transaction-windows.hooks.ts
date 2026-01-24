@@ -11,7 +11,11 @@ import {
   constrainToViewport,
   NETWORK_CONFIGS,
 } from "~/lib/bridge";
-import { useRetryBridge } from "~/lib/bridge/hooks";
+import {
+  useRetryBridge,
+  useResumeBridge,
+  useRecoverBridge,
+} from "~/lib/bridge/hooks";
 import { useUpdateNotification, useNotifications } from "~/lib/notifications";
 import { parseTransactionError, useBridgeStore } from "~/lib/bridge";
 import type { TransactionWindowProps } from "./transaction-windows.types";
@@ -46,8 +50,10 @@ export function useMultiWindowBridgeProgressState({
   const windowRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
 
-  // Retry functionality
+  // Retry, resume, and recover functionality
   const { retryBridge, isRetrying } = useRetryBridge();
+  const { resumeBridge, isResuming } = useResumeBridge();
+  const { recoverBridge, isRecovering } = useRecoverBridge();
   const updateNotification = useUpdateNotification();
   const notifications = useNotifications();
   const setCurrentTransaction = useBridgeStore(
@@ -55,7 +61,32 @@ export function useMultiWindowBridgeProgressState({
   );
   const cancelTransaction = useCancelTransaction();
 
+  // Track whether we've attempted to resume this transaction
+  const hasAttemptedResumeRef = useRef(false);
+
+  // Track if notification was already updated for current terminal state
+  const hasUpdatedNotificationRef = useRef(false);
+
+  // Refs for stable function references (prevents dependency churn in useEffect)
+  const resumeBridgeRef = useRef(resumeBridge);
+  const recoverBridgeRef = useRef(recoverBridge);
+  const notificationsRef = useRef(notifications);
+  const updateNotificationRef = useRef(updateNotification);
+
+  // Keep refs updated with latest function references
+  useEffect(() => {
+    resumeBridgeRef.current = resumeBridge;
+    recoverBridgeRef.current = recoverBridge;
+    notificationsRef.current = notifications;
+    updateNotificationRef.current = updateNotification;
+  });
+
   const { transaction, position, zIndex } = transactionWindow;
+
+  // Reset notification update flag when transaction changes
+  useEffect(() => {
+    hasUpdatedNotificationRef.current = false;
+  }, [transaction?.id]);
 
   // Track current position for spring-back animation
   const [currentPosition, setCurrentPosition] = useState(position);
@@ -64,6 +95,125 @@ export function useMultiWindowBridgeProgressState({
   useEffect(() => {
     setCurrentPosition(position);
   }, [position.x, position.y]);
+
+  // Auto-resume in-progress transactions when window opens
+  // This handles the case where user refreshes the page during a bridge operation
+  // and then opens the transaction from history/notifications
+  useEffect(() => {
+    if (!transaction || hasAttemptedResumeRef.current) return;
+
+    // Early exit for terminal states - prevents re-triggering after completion
+    if (
+      transaction.status === "completed" ||
+      transaction.status === "failed" ||
+      transaction.status === "cancelled"
+    ) {
+      return;
+    }
+
+    // Only resume if transaction is in-progress
+    const isResumable =
+      transaction.status === "bridging" ||
+      transaction.status === "confirming" ||
+      transaction.status === "pending" ||
+      transaction.status === "approving" ||
+      transaction.status === "approved";
+
+    if (!isResumable) return;
+
+    // Check if transaction has bridgeResult (required for resume)
+    const hasBridgeResult = !!transaction.bridgeResult;
+
+    // Check if burn step completed (required for recovery when bridgeResult is missing)
+    const burnStep = transaction.steps.find((s) => s.id === "burn");
+    const hasBurnCompleted =
+      burnStep?.status === "completed" && !!burnStep?.txHash;
+
+    // If neither condition is met, transaction is too early to recover
+    if (!hasBridgeResult && !hasBurnCompleted) return;
+
+    // Set ref BEFORE async call - NEVER reset on error to prevent infinite loops
+    hasAttemptedResumeRef.current = true;
+
+    console.log("Auto-resume/recover triggered", {
+      isResumable,
+      hasBridgeResult,
+      hasBurnCompleted,
+      status: transaction.status,
+      transactionId: transaction.id,
+    });
+
+    if (hasBridgeResult) {
+      // Normal resume path - bridgeResult exists, use kit.retry() directly
+      void resumeBridgeRef.current(transaction.id).catch((err) => {
+        console.error("[Auto-Resume] Failed:", err);
+        // DO NOT reset hasAttemptedResumeRef - prevents infinite retry loop
+      });
+    } else if (hasBurnCompleted) {
+      // Recovery path - bridgeResult is missing (page refresh during attestation)
+      // Reconstruct bridgeResult from captured events and retry
+      void recoverBridgeRef.current(transaction.id).catch((err) => {
+        console.error("[Auto-Recover] Failed:", err);
+        // DO NOT reset hasAttemptedResumeRef - prevents infinite retry loop
+      });
+    }
+  }, [transaction?.id]); // Only depend on transaction ID to prevent re-render loops
+
+  // Update notification when transaction reaches terminal state
+  // This handles notifications for recovery/resume operations
+  useEffect(() => {
+    if (!transaction || hasUpdatedNotificationRef.current) return;
+
+    // Only update notification for terminal states
+    if (
+      transaction.status !== "completed" &&
+      transaction.status !== "failed" &&
+      transaction.status !== "cancelled"
+    ) {
+      return;
+    }
+
+    // Mark as updated BEFORE the async call to prevent re-entry
+    hasUpdatedNotificationRef.current = true;
+
+    // Find the notification linked to this transaction
+    const notificationId =
+      transaction.notificationId ??
+      notificationsRef.current.find(
+        (n) => n.bridgeTransactionId === transaction.id,
+      )?.id;
+
+    if (!notificationId) return;
+
+    const fromNetwork = NETWORK_CONFIGS[transaction.fromChain];
+    const toNetwork = NETWORK_CONFIGS[transaction.toChain];
+
+    if (transaction.status === "completed") {
+      void updateNotificationRef.current(notificationId, {
+        status: "success",
+        title: "Bridge Completed",
+        message: `Successfully transferred ${transaction.amount} USDC from ${fromNetwork?.displayName} to ${toNetwork?.displayName}`,
+        actionLabel: undefined,
+        actionType: undefined,
+      });
+    } else if (
+      transaction.status === "failed" ||
+      transaction.status === "cancelled"
+    ) {
+      const parsed = parseTransactionError(
+        transaction.error ?? "Transaction failed",
+      );
+      void updateNotificationRef.current(notificationId, {
+        status: "failed",
+        title: parsed.isUserRejection
+          ? "Transaction Rejected"
+          : "Bridge Failed",
+        message: parsed.userMessage,
+        actionLabel: "Open Bridge Status",
+        actionType: "view",
+      });
+    }
+  }, [transaction?.id, transaction?.status]); // Only depend on ID and status to prevent re-render loops
 
   // Prevent text selection during drag
   useEffect(() => {
@@ -183,7 +333,7 @@ export function useMultiWindowBridgeProgressState({
       const notificationUpdate = getNotificationUpdate();
 
       if (notificationId) {
-        updateNotification(notificationId, {
+        void updateNotification(notificationId, {
           ...notificationUpdate,
           bridgeTransactionId: retryTransaction.id,
           fromChain: NETWORK_CONFIGS[transaction.fromChain]?.displayName,
@@ -217,7 +367,7 @@ export function useMultiWindowBridgeProgressState({
 
     // Update the notification to show cancelled status
     if (notificationId) {
-      updateNotification(notificationId, {
+      void updateNotification(notificationId, {
         status: "failed",
         title: "Transfer Cancelled",
         message: `Cancelled bridge transfer of ${transaction.amount} USDC`,
@@ -248,6 +398,8 @@ export function useMultiWindowBridgeProgressState({
     isMaximized,
     copiedHash,
     isRetrying,
+    isResuming,
+    isRecovering,
     isCompleted,
     isFailed,
     isInProgress,

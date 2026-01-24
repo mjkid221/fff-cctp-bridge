@@ -12,8 +12,16 @@ import {
   ExternalLink,
   ArrowRight,
   X,
+  Zap,
+  Wallet,
 } from "lucide-react";
-import { parseStepError, getExplorerTxUrl } from "~/lib/bridge";
+import {
+  parseStepError,
+  getExplorerTxUrl,
+  getExplorerAddressUrl,
+  getTransactionDisplayAddress,
+  formatAddressShort,
+} from "~/lib/bridge";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { ScrollArea } from "~/components/ui/scroll-area";
@@ -37,6 +45,8 @@ export function TransactionWindowView({
   isCancelled,
   fromNetworkDisplayName,
   toNetworkDisplayName,
+  fromNetworkExplorerUrl,
+  toNetworkExplorerUrl,
 
   onDragStart,
   onDragEnd,
@@ -143,12 +153,24 @@ export function TransactionWindowView({
             </motion.button>
           </div>
 
-          {/* Window title */}
-          <div className="text-muted-foreground pointer-events-none absolute left-1/2 -translate-x-1/2 text-xs font-medium">
-            Bridge Progress - {transaction.amount} USDC
+          {/* Window title with transfer method badge */}
+          <div className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 items-center gap-2">
+            <span className="text-muted-foreground text-xs font-medium">
+              Bridge Progress - {transaction.amount} USDC
+            </span>
+            {transaction.transferMethod === "fast" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-500">
+                <Zap className="size-3" />
+                Fast
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-500">
+                Standard
+              </span>
+            )}
           </div>
 
-          {/* Spacer */}
+          {/* Spacer for centering */}
           <div className="w-[52px]" />
         </div>
 
@@ -181,6 +203,7 @@ export function TransactionWindowView({
                         </span>
                       </div>
                     </div>
+                    {/* Amount, fee, and addresses on same line */}
                     <div className="mt-1 flex items-baseline gap-1.5">
                       <h3 className="text-foreground text-2xl font-bold tracking-tight">
                         {transaction.amount}
@@ -188,6 +211,53 @@ export function TransactionWindowView({
                       <span className="text-muted-foreground text-sm font-semibold">
                         USDC
                       </span>
+                      {transaction.transferMethod === "fast" &&
+                        transaction.providerFeeUsdc &&
+                        parseFloat(transaction.providerFeeUsdc) > 0 && (
+                          <span className="text-muted-foreground text-[10px]">
+                            (fee:{" "}
+                            <span className="text-amber-500">
+                              {parseFloat(transaction.providerFeeUsdc).toFixed(
+                                6,
+                              )}
+                            </span>
+                            )
+                          </span>
+                        )}
+                      <span className="text-muted-foreground mx-1 text-[10px]">
+                        |
+                      </span>
+                      <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                        <a
+                          href={getExplorerAddressUrl(
+                            transaction.fromChain,
+                            transaction.sourceAddress ??
+                              transaction.userAddress,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary font-mono transition-colors"
+                        >
+                          {formatAddressShort(
+                            transaction.sourceAddress ??
+                              transaction.userAddress,
+                          )}
+                        </a>
+                        <ArrowRight className="size-2.5" />
+                        <a
+                          href={getExplorerAddressUrl(
+                            transaction.toChain,
+                            getTransactionDisplayAddress(transaction),
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary font-mono transition-colors"
+                        >
+                          {formatAddressShort(
+                            getTransactionDisplayAddress(transaction),
+                          )}
+                        </a>
+                      </div>
                     </div>
                   </div>
                   {transaction.estimatedTime && isInProgress && (

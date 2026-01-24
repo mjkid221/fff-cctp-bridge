@@ -20,6 +20,7 @@ import {
   useCurrentTransaction,
   parseTransactionError,
   useBridgeStore,
+  hasWalletForNetworkType,
 } from "~/lib/bridge";
 import { useAddNotification, useUpdateNotification } from "~/lib/notifications";
 import { NETWORK_CONFIGS } from "~/lib/bridge/networks";
@@ -84,15 +85,10 @@ export function useBridgeCardState() {
 
   // Check if user has a wallet for the destination network type
   // This is needed when using custom addresses - user still needs a wallet to sign mint tx
-  const hasWalletForDestNetwork = toNetworkType
-    ? toNetworkType === "evm"
-      ? walletsByType.ethereum.length > 0
-      : toNetworkType === "solana"
-        ? walletsByType.solana.length > 0
-        : toNetworkType === "sui"
-          ? walletsByType.sui.length > 0
-          : false
-    : false;
+  const hasWalletForDestNetwork = hasWalletForNetworkType(
+    toNetworkType,
+    walletsByType,
+  );
 
   // Local state
   const [amount, setAmount] = useState("");
@@ -110,16 +106,40 @@ export function useBridgeCardState() {
     isLoading: isBridging,
     error: bridgeError,
   } = useBridge();
-  const { estimateBridge, estimate, isEstimating } = useBridgeEstimate();
+  const { data: estimateData, isLoading: isEstimating } = useBridgeEstimate({
+    fromChain,
+    toChain,
+    amount,
+    recipientAddress: useCustomAddress ? customAddress : undefined,
+    transferMethod,
+  });
+  // React Query returns undefined when no data, but component expects null
+  const estimate = estimateData ?? null;
   const { balance } = useWalletBalance(fromChain);
 
   // Refs
   const bridgeCardRef = useRef<HTMLDivElement>(null);
   const beamContainerRef = useRef<HTMLDivElement>(null);
+  const pendingNotificationRef = useRef<string | null>(null);
+  // Track transaction IDs that were initiated by user in this session (not loaded from storage)
+  const initiatedTransactionIdRef = useRef<string | null>(null);
+  // Track when user is actively initiating a bridge (set before executeBridge, cleared after)
+  // This allows the effect to open the window immediately when currentTransaction is set
+  const isInitiatingBridgeRef = useRef(false);
 
-  // Open transaction window when a new bridge transaction starts
+  // Open transaction window ONLY for transactions initiated by user in this session
+  // This prevents auto-opening windows for transactions loaded from storage on page refresh
   useEffect(() => {
     if (!currentTransaction) return;
+
+    // Only auto-open if:
+    // 1. User is currently initiating a bridge (flag set before executeBridge), OR
+    // 2. This transaction was initiated by user in this session (for status updates after bridge starts)
+    const shouldAutoOpen =
+      isInitiatingBridgeRef.current ||
+      currentTransaction.id === initiatedTransactionIdRef.current;
+
+    if (!shouldAutoOpen) return;
 
     const isActive =
       currentTransaction.status === "pending" ||
@@ -133,26 +153,19 @@ export function useBridgeCardState() {
     }
   }, [currentTransaction]);
 
-  // Estimate on amount/chain change
+  // Link pending notification to real transaction ID as soon as transaction is created
+  // This ensures the notification can open the transaction window even if user closes it mid-bridge
   useEffect(() => {
-    if (fromChain && toChain && amount && parseFloat(amount) > 0) {
-      void estimateBridge({
-        fromChain,
-        toChain,
-        amount,
-        recipientAddress: useCustomAddress ? customAddress : undefined,
-        transferMethod,
-      });
-    }
-  }, [
-    fromChain,
-    toChain,
-    amount,
-    useCustomAddress,
-    customAddress,
-    transferMethod,
-    estimateBridge,
-  ]);
+    if (!currentTransaction?.id || !pendingNotificationRef.current) return;
+
+    const notificationId = pendingNotificationRef.current;
+
+    void updateNotification(notificationId, {
+      bridgeTransactionId: currentTransaction.id,
+    });
+    updateTransactionInStore(currentTransaction.id, { notificationId });
+    pendingNotificationRef.current = null;
+  }, [currentTransaction?.id, updateNotification, updateTransactionInStore]);
 
   const handleBridge = useCallback(async () => {
     if (!fromChain || !toChain || !amount) return;
@@ -170,7 +183,7 @@ export function useBridgeCardState() {
     let notificationId: string | undefined;
 
     try {
-      notificationId = addNotification({
+      notificationId = await addNotification({
         type: "bridge",
         status: "in_progress",
         title: "Bridge Started",
@@ -184,6 +197,14 @@ export function useBridgeCardState() {
         actionType: "view",
       });
 
+      // Store notification ID in ref so the effect can link it to real transaction ID
+      // as soon as the transaction is created (before bridge completes)
+      pendingNotificationRef.current = notificationId;
+
+      // Set flag BEFORE executeBridge so the effect knows to auto-open the window
+      // when currentTransaction is set (which happens early in service.bridge())
+      isInitiatingBridgeRef.current = true;
+
       const result = await executeBridge({
         fromChain,
         toChain,
@@ -195,15 +216,23 @@ export function useBridgeCardState() {
         destWallet: selectedDestWalletFull,
       });
 
-      if (result && notificationId) {
-        result.notificationId = notificationId;
-        updateTransactionInStore(result.id, { notificationId });
+      // Clear the initiating flag now that executeBridge has completed
+      isInitiatingBridgeRef.current = false;
+
+      if (result) {
+        // Mark this as a user-initiated transaction (not loaded from storage)
+        initiatedTransactionIdRef.current = result.id;
+
+        if (notificationId) {
+          result.notificationId = notificationId;
+          updateTransactionInStore(result.id, { notificationId });
+        }
         useBridgeStore.getState().openTransactionWindow(result);
       }
 
       if (result && notificationId) {
         if (result.status === "completed") {
-          updateNotification(notificationId, {
+          void updateNotification(notificationId, {
             status: "success",
             title: "Bridge Completed",
             message: `Successfully transferred ${amount} USDC from ${NETWORK_CONFIGS[fromChain]?.displayName} to ${NETWORK_CONFIGS[toChain]?.displayName}`,
@@ -218,7 +247,7 @@ export function useBridgeCardState() {
           const errorToDisplay: unknown = result.error ?? "Transaction failed";
           const parsed = parseTransactionError(errorToDisplay);
 
-          updateNotification(notificationId, {
+          void updateNotification(notificationId, {
             status: "failed",
             title: parsed.isUserRejection
               ? "Transaction Rejected"
@@ -231,10 +260,13 @@ export function useBridgeCardState() {
         }
       }
     } catch (error: unknown) {
+      // Clear the initiating flag on error
+      isInitiatingBridgeRef.current = false;
+
       const parsed = parseTransactionError(error);
 
       if (notificationId) {
-        updateNotification(notificationId, {
+        void updateNotification(notificationId, {
           status: "failed",
           title: parsed.isUserRejection
             ? "Transaction Rejected"
@@ -281,6 +313,7 @@ export function useBridgeCardState() {
     toChain &&
     isValidAmount &&
     !isBridging &&
+    !isEstimating &&
     hasValidSourceWallet &&
     (useCustomAddress
       ? isAddressValid && hasWalletForDestNetwork

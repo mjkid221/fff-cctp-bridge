@@ -2,8 +2,9 @@
 
 import { motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "~/lib/utils";
+import { ScrollArea } from "~/components/ui/scroll-area";
 import {
   NETWORK_CONFIGS,
   getNetworksByEnvironment,
@@ -16,6 +17,7 @@ interface ChainSelectorProps {
   onSelectChain: (chain: SupportedChainId) => void;
   label: string;
   excludeChainId?: SupportedChainId | null;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function ChainSelector({
@@ -23,8 +25,11 @@ export function ChainSelector({
   onSelectChain,
   label,
   excludeChainId,
+  containerRef,
 }: ChainSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const environment = useEnvironment();
 
   const availableChains = getNetworksByEnvironment(environment).filter(
@@ -32,6 +37,39 @@ export function ChainSelector({
   );
 
   const selected = selectedChain ? NETWORK_CONFIGS[selectedChain] : null;
+
+  const calculateMaxHeight = useCallback(() => {
+    if (!dropdownRef.current || !containerRef?.current) {
+      setMaxHeight(undefined);
+      return;
+    }
+
+    const dropdownRect = dropdownRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    // Calculate available space from dropdown top to container bottom
+    // Subtract padding (16px) to keep some space from the edge
+    const availableSpace = containerRect.bottom - dropdownRect.top - 16;
+
+    // Only set max-height if content would overflow
+    // Each network item is roughly 64px (p-3 + icon + text)
+    const estimatedContentHeight = availableChains.length * 64 + 16; // +16 for padding
+
+    if (estimatedContentHeight > availableSpace && availableSpace > 100) {
+      setMaxHeight(availableSpace);
+    } else {
+      setMaxHeight(undefined);
+    }
+  }, [containerRef, availableChains.length]);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure dropdown is rendered
+      requestAnimationFrame(() => {
+        calculateMaxHeight();
+      });
+    }
+  }, [isOpen, calculateMaxHeight]);
 
   return (
     <div className="relative">
@@ -94,50 +132,94 @@ export function ChainSelector({
             onClick={() => setIsOpen(false)}
           />
           <motion.div
+            ref={dropdownRef}
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-border/50 bg-card/95 absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl"
+            className="border-border/50 bg-card/95 absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-2xl"
           >
-            <div className="space-y-1">
-              {availableChains.map((chain, index) => (
-                <motion.button
-                  key={chain.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => {
-                    onSelectChain(chain.id);
-                    setIsOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl p-3 transition-all",
-                    "hover:bg-accent/50",
-                    selectedChain === chain.id && "bg-accent/30",
-                  )}
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div
+            {maxHeight ? (
+              <ScrollArea style={{ maxHeight }}>
+                <div className="space-y-1 p-2">
+                  {availableChains.map((chain, index) => (
+                    <motion.button
+                      key={chain.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        onSelectChain(chain.id);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl p-3 transition-all",
+                        "hover:bg-accent/50",
+                        selectedChain === chain.id && "bg-accent/30",
+                      )}
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div
+                        className={cn(
+                          "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br text-xl font-bold",
+                          chain.color,
+                        )}
+                      >
+                        {chain.icon}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-foreground text-sm font-medium">
+                          {chain.displayName}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          USDC on {chain.name}
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="space-y-1 p-2">
+                {availableChains.map((chain, index) => (
+                  <motion.button
+                    key={chain.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => {
+                      onSelectChain(chain.id);
+                      setIsOpen(false);
+                    }}
                     className={cn(
-                      "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br text-xl font-bold",
-                      chain.color,
+                      "flex w-full items-center gap-3 rounded-xl p-3 transition-all",
+                      "hover:bg-accent/50",
+                      selectedChain === chain.id && "bg-accent/30",
                     )}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    {chain.icon}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <div className="text-foreground text-sm font-medium">
-                      {chain.displayName}
+                    <div
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-xl bg-gradient-to-br text-xl font-bold",
+                        chain.color,
+                      )}
+                    >
+                      {chain.icon}
                     </div>
-                    <div className="text-muted-foreground text-xs">
-                      USDC on {chain.name}
+                    <div className="flex-1 text-left">
+                      <div className="text-foreground text-sm font-medium">
+                        {chain.displayName}
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        USDC on {chain.name}
+                      </div>
                     </div>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
+                  </motion.button>
+                ))}
+              </div>
+            )}
           </motion.div>
         </>
       )}

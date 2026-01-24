@@ -17,11 +17,15 @@ import {
   ExternalLink,
   Search,
   LogOut,
+  LayoutDashboard,
+  Bell,
+  BookOpen,
 } from "lucide-react";
 import { XIcon } from "~/components/icons";
 import { cn } from "~/lib/utils";
 import { useWalletContext } from "~/lib/wallet/wallet-context";
 import { useEnvironment, useSetEnvironment } from "~/lib/bridge";
+import { useToggleNotificationPanel } from "~/lib/notifications";
 import { EXTERNAL_LINKS } from "~/lib/constants";
 import { WindowPortal } from "~/components/ui/window-portal";
 
@@ -29,6 +33,8 @@ interface CommandPaletteProps {
   onOpenTransactionHistory: () => void;
   onOpenDisclaimer: () => void;
   onOpenGame: () => void;
+  onOpenStats: () => void;
+  onOpenExplainer: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -37,6 +43,8 @@ export function CommandPalette({
   onOpenTransactionHistory,
   onOpenDisclaimer,
   onOpenGame,
+  onOpenStats,
+  onOpenExplainer,
   open: controlledOpen,
   onOpenChange,
 }: CommandPaletteProps) {
@@ -61,6 +69,7 @@ export function CommandPalette({
   const { primaryWallet } = walletContext;
   const environment = useEnvironment();
   const setEnvironment = useSetEnvironment();
+  const toggleNotificationPanel = useToggleNotificationPanel();
 
   // Sync theme state with document
   useEffect(() => {
@@ -163,6 +172,21 @@ export function CommandPalette({
                       icon={<History className="size-4" />}
                       label="Transaction History"
                       shortcut="H"
+                    />
+                    <CommandItem
+                      onSelect={() => runCommand(onOpenStats)}
+                      icon={<LayoutDashboard className="size-4" />}
+                      label="Bridge Stats"
+                    />
+                    <CommandItem
+                      onSelect={() => runCommand(toggleNotificationPanel)}
+                      icon={<Bell className="size-4" />}
+                      label="Notifications"
+                    />
+                    <CommandItem
+                      onSelect={() => runCommand(onOpenExplainer)}
+                      icon={<BookOpen className="size-4" />}
+                      label="How CCTP Works"
                     />
                   </Command.Group>
 

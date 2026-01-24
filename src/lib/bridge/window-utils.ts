@@ -144,7 +144,8 @@ export type WindowType =
   | "transaction-history"
   | "bridge-progress"
   | "disclaimer"
-  | "pong";
+  | "pong"
+  | "stats";
 
 /**
  * Default positions for each window type
@@ -155,6 +156,7 @@ export const DEFAULT_WINDOW_POSITIONS: Record<WindowType, WindowPosition> = {
   "bridge-progress": { x: 400, y: 150 },
   disclaimer: { x: 200, y: 150 },
   pong: { x: 300, y: 100 },
+  stats: { x: 150, y: 120 },
 };
 
 /**
@@ -177,6 +179,7 @@ export function getWindowDimensions(
     "bridge-progress": { width: 500, height: 600 },
     disclaimer: { width: 500, height: 450 },
     pong: { width: 450, height: 400 },
+    stats: { width: 420, height: 380 },
   };
 
   const dimensions = dimensionsByType[windowType];

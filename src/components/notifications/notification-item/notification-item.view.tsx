@@ -14,9 +14,6 @@ export function NotificationItemView({
 }: NotificationItemViewProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -20, scale: 0.95 }}
       whileHover={{ scale: 1.01, y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{

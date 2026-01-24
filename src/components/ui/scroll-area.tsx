@@ -7,15 +7,21 @@ interface ScrollAreaProps {
   children: React.ReactNode;
   className?: string;
   autoHide?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function ScrollArea({
   children,
   className,
   autoHide = true,
+  style,
 }: ScrollAreaProps) {
   return (
-    <SimpleBar autoHide={autoHide} className={cn("h-full", className)}>
+    <SimpleBar
+      autoHide={autoHide}
+      className={cn("h-full", className)}
+      style={style}
+    >
       {children}
     </SimpleBar>
   );

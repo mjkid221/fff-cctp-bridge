@@ -9,4 +9,3 @@ patchedDependencies:
   '@circle-fin/bridge-kit': patches/@circle-fin__bridge-kit.patch
   '@circle-fin/adapter-viem-v2': patches/@circle-fin__adapter-viem-v2.patch
   '@circle-fin/adapter-solana': patches/@circle-fin__adapter-solana.patch
-  '@circle-fin/provider-cctp-v2@1.0.5': patches/@circle-fin__provider-cctp-v2@1.0.5.patch

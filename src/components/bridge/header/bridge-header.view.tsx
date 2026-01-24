@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence, LayoutGroup } from "motion/react";
+import { motion, AnimatePresence, LayoutGroup, Reorder } from "motion/react";
 import { DynamicEmbeddedWidget } from "@dynamic-labs/sdk-react-core";
 import { TokenUSDC } from "@web3icons/react";
 import { NotificationPanel } from "~/components/notifications";
@@ -14,9 +14,10 @@ import {
   MobileDisclaimerDrawer,
 } from "./disclaimer";
 import { DraggablePongWindow, MobilePongDrawer } from "./pong";
+import { StatsWindow } from "./stats-window";
 import { CCTPExplainerView } from "../cctp-explainer";
 import { NavMenuEntry, NAV_MENU_CONFIG } from "./nav-menu";
-import { HeaderControlEntry, HEADER_CONTROLS_CONFIG } from "./header-controls";
+import { HeaderControlEntry, getHeaderControl } from "./header-controls";
 import type { BridgeHeaderViewProps } from "./bridge-header.types";
 
 export function BridgeHeaderView(props: BridgeHeaderViewProps) {
@@ -25,16 +26,24 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
     showTransactionHistory,
     showDisclaimer,
     showPongGame,
+    showStats,
     showExplainer,
     commandPaletteOpen,
+    headerControlOrder,
+    onReorderHeaderControls,
+    onDragStartControls,
+    onDragEndControls,
     onCloseDynamicProfile,
     onCloseTransactionHistory,
     onCloseDisclaimer,
     onClosePongGame,
+    onCloseStats,
     onCloseExplainer,
     onOpenTransactionHistory,
     onOpenDisclaimer,
     onOpenPongGame,
+    onOpenStats,
+    onOpenExplainer,
     onOpenCommandPalette,
     onCloseCommandPalette,
   } = props;
@@ -73,16 +82,31 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
             </LayoutGroup>
           </div>
 
-          {/* Right section - Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {HEADER_CONTROLS_CONFIG.map((control) => (
-              <HeaderControlEntry
-                key={control.id}
-                control={control}
-                viewProps={props}
-              />
-            ))}
-          </div>
+          {/* Right section - Controls (draggable) */}
+          <Reorder.Group
+            as="div"
+            axis="x"
+            values={headerControlOrder}
+            onReorder={onReorderHeaderControls}
+            className="flex items-center gap-1.5 sm:gap-2"
+          >
+            {headerControlOrder.map((controlId: string) => {
+              const control = getHeaderControl(controlId);
+              if (!control) return null;
+              return (
+                <Reorder.Item
+                  as="div"
+                  key={controlId}
+                  value={controlId}
+                  onDragStart={() => onDragStartControls()}
+                  onDragEnd={() => onDragEndControls()}
+                  className="flex cursor-grab items-center justify-center active:cursor-grabbing"
+                >
+                  <HeaderControlEntry control={control} viewProps={props} />
+                </Reorder.Item>
+              );
+            })}
+          </Reorder.Group>
         </div>
       </motion.header>
 
@@ -154,6 +178,11 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
         )}
       </AnimatePresence>
 
+      {/* Stats Window - Desktop only */}
+      <AnimatePresence>
+        {showStats && <StatsWindow onClose={onCloseStats} />}
+      </AnimatePresence>
+
       {/* CCTP Explainer Modal */}
       <CCTPExplainerView isOpen={showExplainer} onClose={onCloseExplainer} />
 
@@ -162,6 +191,8 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
         onOpenTransactionHistory={onOpenTransactionHistory}
         onOpenDisclaimer={onOpenDisclaimer}
         onOpenGame={onOpenPongGame}
+        onOpenStats={onOpenStats}
+        onOpenExplainer={onOpenExplainer}
         open={commandPaletteOpen}
         onOpenChange={(open) =>
           open ? onOpenCommandPalette() : onCloseCommandPalette()

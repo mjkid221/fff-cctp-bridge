@@ -1,5 +1,16 @@
 import type { SupportedChainId } from "./networks";
-import type { BridgeParams } from "./types";
+import type { TransferMethod } from "./types";
+
+/**
+ * Parameters for estimate query keys (excludes non-serializable wallet objects)
+ */
+export interface EstimateKeyParams {
+  fromChain: SupportedChainId;
+  toChain: SupportedChainId;
+  amount: string;
+  recipientAddress?: string;
+  transferMethod?: TransferMethod;
+}
 
 /**
  * Query key factory for bridge-related queries
@@ -17,7 +28,7 @@ export const bridgeKeys = {
 
   // Estimate queries
   estimates: () => [...bridgeKeys.all, "estimate"] as const,
-  estimate: (params: BridgeParams) =>
+  estimate: (params: EstimateKeyParams) =>
     [...bridgeKeys.estimates(), params] as const,
 
   // Route queries

@@ -54,9 +54,10 @@ export function FeeSummaryView({
         damping: 30,
         stiffness: 300,
       }}
-      className={cn("fixed top-0 left-0 hidden lg:block", zIndex)}
+      className="fixed top-0 left-0 hidden lg:block"
       style={{
         touchAction: "none",
+        zIndex,
       }}
       onPointerDown={onFocus}
     >

@@ -42,6 +42,8 @@ export {
   useBridgeEstimate,
   useBridge,
   useRetryBridge,
+  useResumeBridge,
+  useRecoverBridge,
   useTransactionHistory,
   useNetworkAutoSwitch,
   useWalletBalance,
@@ -49,6 +51,13 @@ export {
   useWalletSelection,
   useWalletsByType,
 } from "./hooks";
+
+// Shared window state hook
+export { useWindowState } from "./useWindowState";
+export type {
+  UseWindowStateOptions,
+  WindowStateReturn,
+} from "./useWindowState";
 
 // Query keys for React Query cache management
 export { bridgeKeys } from "./query-keys";
@@ -67,6 +76,17 @@ export {
   validateAddressForNetwork,
   getAddressFormatDescription,
 } from "./address-validation";
+
+// Utility functions
+export {
+  NETWORK_TYPE_LABELS,
+  getNetworkTypeLabel,
+  getWalletKeyForNetworkType,
+  hasWalletForNetworkType,
+  getWalletsForNetworkType,
+  getTransactionDisplayAddress,
+  formatAddressShort,
+} from "./utils";
 
 // Error parsing
 export { parseTransactionError, parseStepError } from "./error-parser";
@@ -102,6 +122,9 @@ export {
   useUpdateTransactionInWindow,
   useMinimizeTransactionWindow,
   useCancelTransaction,
+  // Header control order
+  useHeaderControlOrder,
+  useSetHeaderControlOrder,
 } from "./store";
 export type { TransactionWindow } from "./store";
 
@@ -126,6 +149,7 @@ export {
   getNetworksByEnvironment,
   isRouteSupported,
   getExplorerTxUrl,
+  getExplorerAddressUrl,
 } from "./networks";
 export type {
   NetworkEnvironment,
