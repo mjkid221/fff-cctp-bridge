@@ -4,6 +4,14 @@ overrides:
   axios@>=1.0.0 <1.12.0: '>=1.12.0'
   valibot@>=0.31.0 <1.2.0: '>=1.2.0'
   '@modelcontextprotocol/sdk@<1.24.0': '>=1.24.0'
+  '@trpc/server@>=11.0.0 <11.8.0': '>=11.8.0'
+  qs@<6.14.1: '>=6.14.1'
+  '@modelcontextprotocol/sdk@<1.25.2': '>=1.25.2'
+  preact@>=10.27.0 <10.27.3: '>=10.27.3'
+  h3@<=1.15.4: '>=1.15.5'
+  lodash-es@>=4.0.0 <=4.17.22: '>=4.17.23'
+  lodash@>=4.0.0 <=4.17.22: '>=4.17.23'
+  diff@>=6.0.0 <8.0.3: '>=8.0.3'
 
 patchedDependencies:
   '@circle-fin/bridge-kit': patches/@circle-fin__bridge-kit.patch
