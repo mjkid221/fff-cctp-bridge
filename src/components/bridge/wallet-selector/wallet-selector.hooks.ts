@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import type {
-  WalletOption,
-  WalletSelectorProps,
-} from "./wallet-selector.types";
+import type { WalletSelectorProps } from "./wallet-selector.types";
 
 export function useWalletSelectorState({
   wallets,
@@ -77,12 +74,4 @@ export function useWalletSelectorState({
     compatibleWallets,
     selectedWallet,
   };
-}
-
-export function formatAddress(address: string) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-export function getWalletName(wallet: WalletOption) {
-  return wallet.connector.name || wallet.connector.key;
 }

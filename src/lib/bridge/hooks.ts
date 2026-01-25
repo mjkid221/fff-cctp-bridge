@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useWalletContext } from "~/lib/wallet/wallet-context";
 import { useDynamicLinkWalletModal } from "~/lib/wallet/providers/dynamic/context";
 import { getTabIndexForNetwork } from "~/lib/wallet/providers/dynamic/tab-utils";
 import type { IWallet } from "~/lib/wallet/types";
 import { getBridgeService } from "./service";
+import { BridgeStorage, type TransactionPage } from "./storage";
 import { useBridgeStore } from "./store";
-import type {
-  BridgeParams,
-  BridgeEstimate,
-  BridgeTransaction,
-  WalletOption,
-} from "./types";
+import type { BridgeParams, BridgeTransaction, WalletOption } from "./types";
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
 import { bridgeKeys } from "./query-keys";
@@ -363,6 +363,50 @@ export function useTransactionHistory() {
   }, [loadTransactions]);
 
   return { transactions, isLoading, refresh };
+}
+
+/**
+ * Hook for paginated transaction history using useInfiniteQuery
+ * Used by the transaction history UI for infinite scroll
+ */
+export function useTransactionHistoryInfinite() {
+  const userAddress = useBridgeStore((state) => state.userAddress);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: bridgeKeys.transactionHistory(userAddress),
+    queryFn: async ({ pageParam }): Promise<TransactionPage> => {
+      if (!userAddress) {
+        return { transactions: [], nextCursor: null };
+      }
+      return BridgeStorage.getTransactionPage(userAddress, 10, pageParam);
+    },
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage: TransactionPage) =>
+      lastPage.nextCursor ?? undefined,
+    enabled: !!userAddress,
+  });
+
+  // Flatten pages into single array
+  const transactions: BridgeTransaction[] = useMemo(
+    () => data?.pages.flatMap((page) => page.transactions) ?? [],
+    [data],
+  );
+
+  return {
+    transactions,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage: hasNextPage ?? false,
+    fetchNextPage,
+    refetch,
+  };
 }
 
 /**

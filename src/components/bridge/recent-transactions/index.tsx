@@ -9,10 +9,19 @@ export type { RecentTransactionsProps };
 
 export function RecentTransactions({
   hideHeader = false,
+  disableClick = false,
+  maxItems,
 }: RecentTransactionsProps) {
   const state = useRecentTransactionsState();
 
-  return <RecentTransactionsView {...state} hideHeader={hideHeader} />;
+  return (
+    <RecentTransactionsView
+      {...state}
+      hideHeader={hideHeader}
+      disableClick={disableClick}
+      maxItems={maxItems}
+    />
+  );
 }
 
 export function RecentTransactionsHeader() {

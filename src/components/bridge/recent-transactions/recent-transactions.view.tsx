@@ -8,10 +8,19 @@ import type { RecentTransactionsViewProps } from "./recent-transactions.types";
 export function RecentTransactionsView({
   filteredTransactions,
   isLoading,
+  isFetchingNextPage,
+  hasNextPage,
   environment,
   hideHeader,
+  disableClick,
+  maxItems,
   onOpenTransaction,
+  loadMoreRef,
 }: RecentTransactionsViewProps) {
+  // Limit transactions when maxItems is set
+  const displayTransactions = maxItems
+    ? filteredTransactions.slice(0, maxItems)
+    : filteredTransactions;
   if (isLoading && filteredTransactions.length === 0) {
     return (
       <div className="w-full max-w-4xl space-y-3">
@@ -73,14 +82,30 @@ export function RecentTransactionsView({
       )}
 
       <div className="space-y-3">
-        {filteredTransactions.map((tx, index) => (
+        {displayTransactions.map((tx, index) => (
           <TransactionRow
             key={tx.id}
             transaction={tx}
             index={index}
             onOpenTransaction={onOpenTransaction}
+            disableClick={disableClick}
           />
         ))}
+
+        {/* Infinite scroll trigger via intersection observer (hide when maxItems is set) */}
+        {!maxItems && <div ref={loadMoreRef} className="h-1" />}
+
+        {!maxItems && isFetchingNextPage && (
+          <div className="flex justify-center py-4">
+            <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
+          </div>
+        )}
+
+        {!maxItems && !hasNextPage && filteredTransactions.length > 0 && (
+          <p className="text-muted-foreground py-2 text-center text-xs">
+            No more transactions
+          </p>
+        )}
       </div>
     </motion.div>
   );

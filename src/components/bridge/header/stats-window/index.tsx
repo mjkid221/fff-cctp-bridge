@@ -10,4 +10,5 @@ export function StatsWindow(props: StatsWindowProps) {
   return <StatsWindowView {...state} />;
 }
 
+export { MobileStatsDrawer } from "./stats-drawer";
 export type { StatsWindowProps, BridgeStats } from "./stats-window.types";

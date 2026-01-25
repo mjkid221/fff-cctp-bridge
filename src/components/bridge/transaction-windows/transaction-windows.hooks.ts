@@ -94,7 +94,7 @@ export function useMultiWindowBridgeProgressState({
   // Update position when it changes from store
   useEffect(() => {
     setCurrentPosition(position);
-  }, [position.x, position.y]);
+  }, [position]);
 
   // Auto-resume in-progress transactions when window opens
   // This handles the case where user refreshes the page during a bridge operation
@@ -157,7 +157,8 @@ export function useMultiWindowBridgeProgressState({
         // DO NOT reset hasAttemptedResumeRef - prevents infinite retry loop
       });
     }
-  }, [transaction?.id]); // Only depend on transaction ID to prevent re-render loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only depend on transaction ID to prevent re-render loops
+  }, [transaction?.id]);
 
   // Update notification when transaction reaches terminal state
   // This handles notifications for recovery/resume operations
@@ -213,7 +214,8 @@ export function useMultiWindowBridgeProgressState({
         actionType: "view",
       });
     }
-  }, [transaction?.id, transaction?.status]); // Only depend on ID and status to prevent re-render loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only depend on ID and status to prevent re-render loops
+  }, [transaction?.id, transaction?.status]);
 
   // Prevent text selection during drag
   useEffect(() => {
@@ -362,7 +364,6 @@ export function useMultiWindowBridgeProgressState({
       transaction.notificationId ??
       notifications.find((n) => n.bridgeTransactionId === transaction.id)?.id;
 
-    // Cancel the transaction
     await cancelTransaction(transaction.id);
 
     // Update the notification to show cancelled status

@@ -1,54 +1,52 @@
 "use client";
 
 import { useMemo, useRef } from "react";
-import { useTransactionHistory } from "~/lib/bridge/hooks";
+import { useQuery } from "@tanstack/react-query";
+import { useUserAddress } from "~/lib/bridge/store";
+import { StatsStorage } from "~/lib/bridge/stats-storage";
 import type { StatsWindowProps, BridgeStats } from "./stats-window.types";
 
 export function useStatsWindowState({ onClose }: StatsWindowProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const userAddress = useUserAddress();
 
-  // Get transaction history for stats calculation
-  const { transactions, isLoading } = useTransactionHistory();
+  const { data: rawStats, isLoading } = useQuery({
+    queryKey: ["userStats", userAddress],
+    queryFn: async () => {
+      if (!userAddress) return null;
+      return StatsStorage.getOrCreate(userAddress);
+    },
+    enabled: !!userAddress,
+  });
 
-  // Calculate stats from transactions
   const stats = useMemo<BridgeStats>(() => {
-    const completedTxs = transactions.filter((tx) => tx.status === "completed");
+    if (!rawStats) {
+      return {
+        totalBridged: "0.00",
+        totalTransactions: 0,
+        totalFeesPaid: "0.00",
+        estimatedSavings: "0.00",
+        fastTransactions: 0,
+        standardTransactions: 0,
+      };
+    }
 
-    // Total USDC bridged
-    const totalBridged = completedTxs.reduce(
-      (sum, tx) => sum + parseFloat(tx.amount || "0"),
-      0,
-    );
-
-    // Total USDC fees paid (fast mode only)
-    const totalFeesPaid = completedTxs.reduce((sum, tx) => {
-      if (tx.transferMethod === "fast" && tx.providerFeeUsdc) {
-        return sum + parseFloat(tx.providerFeeUsdc);
-      }
-      return sum;
-    }, 0);
-
-    // Count fast vs standard transactions
-    const fastTxs = completedTxs.filter(
-      (tx) => tx.transferMethod === "fast",
-    ).length;
-    const standardTxs = completedTxs.filter(
-      (tx) => tx.transferMethod === "standard" || !tx.transferMethod,
-    ).length;
-
-    // Estimated savings vs third-party bridges (typically 0.15-0.2% of volume or even higher depending on amount)
+    // Estimated savings vs third-party bridges (typically 0.15-0.2% of volume)
     // We use 0.2% as conservative estimate
     const thirdPartyFeeRate = 0.002;
-    const wouldHavePaid = totalBridged * thirdPartyFeeRate;
-    const estimatedSavings = Math.max(0, wouldHavePaid - totalFeesPaid);
+    const wouldHavePaid = rawStats.totalBridged * thirdPartyFeeRate;
+    const estimatedSavings = Math.max(
+      0,
+      wouldHavePaid - rawStats.totalFeesPaid,
+    );
 
     return {
-      totalBridged: totalBridged.toLocaleString("en-US", {
+      totalBridged: rawStats.totalBridged.toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      totalTransactions: completedTxs.length,
-      totalFeesPaid: totalFeesPaid.toLocaleString("en-US", {
+      totalTransactions: rawStats.totalTransactions,
+      totalFeesPaid: rawStats.totalFeesPaid.toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 6,
       }),
@@ -56,10 +54,10 @@ export function useStatsWindowState({ onClose }: StatsWindowProps) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }),
-      fastTransactions: fastTxs,
-      standardTransactions: standardTxs,
+      fastTransactions: rawStats.fastTransactions,
+      standardTransactions: rawStats.standardTransactions,
     };
-  }, [transactions]);
+  }, [rawStats]);
 
   return {
     panelRef,

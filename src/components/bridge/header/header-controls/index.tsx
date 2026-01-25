@@ -1,4 +1,5 @@
 export { HeaderControlEntry } from "./header-control-entry";
+export { MobileMenu } from "./mobile-menu";
 export {
   HEADER_CONTROLS_CONFIG,
   HEADER_CONTROLS_MAP,

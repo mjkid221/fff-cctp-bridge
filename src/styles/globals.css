@@ -228,6 +228,16 @@
   right: 2px;
 }
 
+/* Hide scrollbar utility for mobile touch scrolling */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* For theme toggle */
 ::view-transition-old(root),
 ::view-transition-new(root) {

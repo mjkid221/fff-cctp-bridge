@@ -49,12 +49,24 @@ async function getDB(): Promise<IDBPDatabase<NotificationDB>> {
  */
 export class NotificationStorage {
   /**
-   * Get all notifications (sorted by timestamp desc)
+   * Get all notifications using cursor-based query (sorted by timestamp desc)
+   * @param limit Optional limit for number of notifications to return
    */
-  static async getAll(): Promise<Notification[]> {
+  static async getAll(limit?: number): Promise<Notification[]> {
     const db = await getDB();
-    const all = await db.getAll("notifications");
-    return all.sort((a, b) => b.timestamp - a.timestamp);
+    const results: Notification[] = [];
+
+    let cursor = await db
+      .transaction("notifications")
+      .store.index("by-timestamp")
+      .openCursor(null, "prev");
+
+    while (cursor && (limit === undefined || results.length < limit)) {
+      results.push(cursor.value);
+      cursor = await cursor.continue();
+    }
+
+    return results;
   }
 
   /**
@@ -117,8 +129,27 @@ export class NotificationStorage {
   /**
    * Get recent notifications (limited)
    */
-  static async getRecent(limit = 50): Promise<Notification[]> {
-    const all = await this.getAll();
-    return all.slice(0, limit);
+  static async getRecent(limit = 100): Promise<Notification[]> {
+    return this.getAll(limit);
+  }
+
+  /**
+   * Prune old notifications, keeping only the most recent ones
+   * @returns Number of notifications deleted
+   */
+  static async pruneOld(keep = 100): Promise<number> {
+    const db = await getDB();
+    const all = await db.getAll("notifications");
+
+    if (all.length <= keep) return 0;
+
+    const sorted = all.sort((a, b) => b.timestamp - a.timestamp);
+    const toDelete = sorted.slice(keep);
+
+    const tx = db.transaction("notifications", "readwrite");
+    await Promise.all(toDelete.map((n) => tx.store.delete(n.id)));
+    await tx.done;
+
+    return toDelete.length;
   }
 }
