@@ -2,6 +2,14 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { BridgeTransaction } from "./types";
 
 /**
+ * Page result for cursor-based pagination
+ */
+export interface TransactionPage {
+  transactions: BridgeTransaction[];
+  nextCursor: number | null; // createdAt of last item, null if no more
+}
+
+/**
  * IndexedDB schema for bridge transactions
  */
 interface BridgeDB extends DBSchema {
@@ -13,12 +21,13 @@ interface BridgeDB extends DBSchema {
       "by-status": string;
       "by-user-and-status": [string, string];
       "by-created": number;
+      "by-user-and-created": [string, number];
     };
   };
 }
 
 const DB_NAME = "cctp-bridge";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance: IDBPDatabase<BridgeDB> | null = null;
 
@@ -29,15 +38,29 @@ async function getDB(): Promise<IDBPDatabase<BridgeDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<BridgeDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const txStore = db.createObjectStore("transactions", {
-        keyPath: "id",
-      });
+    upgrade(db, oldVersion, _newVersion, transaction) {
+      if (oldVersion < 1) {
+        const txStore = db.createObjectStore("transactions", {
+          keyPath: "id",
+        });
 
-      txStore.createIndex("by-user", "userAddress");
-      txStore.createIndex("by-status", "status");
-      txStore.createIndex("by-user-and-status", ["userAddress", "status"]);
-      txStore.createIndex("by-created", "createdAt");
+        txStore.createIndex("by-user", "userAddress");
+        txStore.createIndex("by-status", "status");
+        txStore.createIndex("by-user-and-status", ["userAddress", "status"]);
+        txStore.createIndex("by-created", "createdAt");
+        txStore.createIndex("by-user-and-created", [
+          "userAddress",
+          "createdAt",
+        ]);
+      }
+
+      if (oldVersion >= 1 && oldVersion < 2) {
+        const txStore = transaction.objectStore("transactions");
+        txStore.createIndex("by-user-and-created", [
+          "userAddress",
+          "createdAt",
+        ]);
+      }
     },
   });
 
@@ -91,20 +114,75 @@ export class BridgeStorage {
   }
 
   /**
-   * Get recent transactions for a user
+   * Get recent transactions for a user using cursor-based query
    */
   static async getRecentTransactions(
     userAddress: string,
-    limit = 10,
+    limit = 100,
   ): Promise<BridgeTransaction[]> {
     const db = await getDB();
-    const allTxs = await db.getAllFromIndex(
-      "transactions",
-      "by-user",
-      userAddress,
+    const results: BridgeTransaction[] = [];
+
+    const range = IDBKeyRange.bound(
+      [userAddress, 0],
+      [userAddress, Date.now()],
     );
 
-    return allTxs.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+    let cursor = await db
+      .transaction("transactions")
+      .store.index("by-user-and-created")
+      .openCursor(range, "prev");
+
+    while (cursor && results.length < limit) {
+      results.push(cursor.value);
+      cursor = await cursor.continue();
+    }
+
+    return results;
+  }
+
+  /**
+   * Get transactions with cursor-based pagination for useInfiniteQuery
+   * @param userAddress User's wallet address
+   * @param limit Number of items per page
+   * @param cursor createdAt timestamp to fetch items older than
+   */
+  static async getTransactionPage(
+    userAddress: string,
+    limit = 10,
+    cursor?: number,
+  ): Promise<TransactionPage> {
+    const db = await getDB();
+    const results: BridgeTransaction[] = [];
+
+    // +1 to include current timestamp on first page
+    const upperBound = cursor ?? Date.now() + 1;
+    const range = IDBKeyRange.bound(
+      [userAddress, 0],
+      [userAddress, upperBound],
+      false, // Include lower bound
+      true, // Exclude upper bound (items with createdAt < cursor)
+    );
+
+    let dbCursor = await db
+      .transaction("transactions")
+      .store.index("by-user-and-created")
+      .openCursor(range, "prev");
+
+    while (dbCursor && results.length < limit) {
+      results.push(dbCursor.value);
+      dbCursor = await dbCursor.continue();
+    }
+
+    const lastItem = results[results.length - 1];
+    const nextCursor = lastItem ? lastItem.createdAt : null;
+
+    const hasMore = dbCursor !== null;
+
+    return {
+      transactions: results,
+      nextCursor: hasMore ? nextCursor : null,
+    };
   }
 
   /**
@@ -170,6 +248,33 @@ export class BridgeStorage {
 
     const deletePromises = txs.map((tx) => db.delete("transactions", tx.id));
     await Promise.all(deletePromises);
+  }
+
+  /**
+   * Prune old transactions, keeping only the most recent ones
+   * @returns Number of transactions deleted
+   */
+  static async pruneOldTransactions(
+    userAddress: string,
+    keep = 100,
+  ): Promise<number> {
+    const db = await getDB();
+    const allTxs = await db.getAllFromIndex(
+      "transactions",
+      "by-user",
+      userAddress,
+    );
+
+    if (allTxs.length <= keep) return 0;
+
+    const sorted = allTxs.sort((a, b) => b.createdAt - a.createdAt);
+    const toDelete = sorted.slice(keep);
+
+    const tx = db.transaction("transactions", "readwrite");
+    await Promise.all(toDelete.map((t) => tx.store.delete(t.id)));
+    await tx.done;
+
+    return toDelete.length;
   }
 
   /**

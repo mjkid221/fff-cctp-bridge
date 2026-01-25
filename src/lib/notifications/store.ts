@@ -3,6 +3,7 @@
  */
 
 import { create } from "zustand";
+import { nanoid } from "nanoid";
 import type { Notification } from "./types";
 import { NotificationStorage } from "./storage";
 
@@ -40,12 +41,12 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   loadNotifications: async () => {
     if (get().isLoaded) return;
 
-    const notifications = await NotificationStorage.getAll();
+    const notifications = await NotificationStorage.getRecent(20);
     set({ notifications, isLoaded: true });
   },
 
   addNotification: async (notification) => {
-    const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = nanoid();
     const timestamp = Date.now();
 
     const newNotification: Notification = {
@@ -58,7 +59,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     await NotificationStorage.save(newNotification);
 
     set((state) => ({
-      notifications: [newNotification, ...state.notifications].slice(0, 50),
+      notifications: [newNotification, ...state.notifications].slice(0, 20),
     }));
 
     // Auto-dismiss if specified

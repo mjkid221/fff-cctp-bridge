@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 import {
-  useTransactionHistory,
+  useTransactionHistoryInfinite,
   NETWORK_CONFIGS,
   useEnvironment,
   useBridgeStore,
@@ -10,11 +11,30 @@ import {
 } from "~/lib/bridge";
 
 export function useRecentTransactionsState() {
-  const { transactions, isLoading } = useTransactionHistory();
+  const {
+    transactions,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTransactionHistoryInfinite();
+
   const environment = useEnvironment();
   const openTransactionWindow = useBridgeStore(
     (state) => state.openTransactionWindow,
   );
+
+  // Intersection observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    rootMargin: "100px",
+  });
+
+  // Fetch next page when scrolled into view
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleOpenTransaction = useCallback(
     (transaction: BridgeTransaction) => {
@@ -34,20 +54,10 @@ export function useRecentTransactionsState() {
   return {
     filteredTransactions,
     isLoading,
+    isFetchingNextPage,
+    hasNextPage,
     environment,
     onOpenTransaction: handleOpenTransaction,
+    loadMoreRef,
   };
-}
-
-export function formatTimestamp(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
 }

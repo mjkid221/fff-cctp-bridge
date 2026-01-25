@@ -2,10 +2,7 @@
 
 import { motion } from "motion/react";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import {
-  RecentTransactions,
-  RecentTransactionsHeader,
-} from "../../recent-transactions";
+import { RecentTransactions } from "../../recent-transactions";
 import type { TransactionHistoryDrawerProps } from "./transaction-history.types";
 
 export function TransactionHistoryDrawerView({
@@ -43,7 +40,7 @@ export function TransactionHistoryDrawerView({
         {/* Header */}
         <div className="border-border/30 flex items-center justify-between border-b px-4 pb-3">
           <h3 className="text-foreground text-lg font-semibold">
-            Transaction History
+            Recent Transactions
           </h3>
           <button
             onClick={onClose}
@@ -67,17 +64,14 @@ export function TransactionHistoryDrawerView({
           </button>
         </div>
 
-        {/* Fixed header description */}
-        <div className="border-border/30 border-b px-4 pb-3">
-          <RecentTransactionsHeader />
-        </div>
-
         {/* Content */}
-        <ScrollArea className="macos-window-scrollbar flex-1">
-          <div className="p-4">
-            <RecentTransactions hideHeader />
-          </div>
-        </ScrollArea>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-4">
+              <RecentTransactions hideHeader disableClick maxItems={5} />
+            </div>
+          </ScrollArea>
+        </div>
       </motion.div>
     </>
   );

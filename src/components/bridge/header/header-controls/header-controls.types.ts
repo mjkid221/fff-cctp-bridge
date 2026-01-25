@@ -30,4 +30,10 @@ export interface HeaderControlItem {
    * - "all": Always visible (default)
    */
   visibleBreakpoint?: "mobile" | "desktop" | "all";
+
+  // Mobile menu properties
+  /** Display label for mobile menu */
+  label?: string;
+  /** Whether to show in mobile hamburger menu */
+  showInMobileMenu?: boolean;
 }

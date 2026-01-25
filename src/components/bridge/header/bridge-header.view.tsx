@@ -1,9 +1,13 @@
 "use client";
 
+import { useMemo, useCallback } from "react";
 import { motion, AnimatePresence, LayoutGroup, Reorder } from "motion/react";
 import { DynamicEmbeddedWidget } from "@dynamic-labs/sdk-react-core";
 import { TokenUSDC } from "@web3icons/react";
-import { NotificationPanel } from "~/components/notifications";
+import {
+  NotificationPanel,
+  MobileNotificationDrawer,
+} from "~/components/notifications";
 import { CommandPalette } from "~/components/ui/command-palette";
 import {
   DraggableTransactionHistory,
@@ -14,10 +18,15 @@ import {
   MobileDisclaimerDrawer,
 } from "./disclaimer";
 import { DraggablePongWindow, MobilePongDrawer } from "./pong";
-import { StatsWindow } from "./stats-window";
+import { StatsWindow, MobileStatsDrawer } from "./stats-window";
 import { CCTPExplainerView } from "../cctp-explainer";
 import { NavMenuEntry, NAV_MENU_CONFIG } from "./nav-menu";
-import { HeaderControlEntry, getHeaderControl } from "./header-controls";
+import {
+  HeaderControlEntry,
+  getHeaderControl,
+  MobileMenu,
+} from "./header-controls";
+import { NetworkToggle } from "../network-toggle";
 import type { BridgeHeaderViewProps } from "./bridge-header.types";
 
 export function BridgeHeaderView(props: BridgeHeaderViewProps) {
@@ -47,6 +56,30 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
     onOpenCommandPalette,
     onCloseCommandPalette,
   } = props;
+
+  // Filter controls for desktop reorder (exclude mobile-only items to fix invisible gap)
+  const desktopControls = useMemo(() => {
+    return headerControlOrder.filter((id) => {
+      const control = getHeaderControl(id);
+      return control && control.visibleBreakpoint !== "mobile";
+    });
+  }, [headerControlOrder]);
+
+  // Handle reorder while preserving hidden items
+  const handleDesktopReorder = useCallback(
+    (newOrder: string[]) => {
+      // Get items that were filtered out (mobile-only)
+      const hiddenItems = headerControlOrder.filter(
+        (id) => !desktopControls.includes(id),
+      );
+      // Append hidden items at the end to preserve them
+      onReorderHeaderControls([...newOrder, ...hiddenItems]);
+    },
+    [headerControlOrder, desktopControls, onReorderHeaderControls],
+  );
+
+  // Get wallet control for mobile rendering
+  const walletControl = getHeaderControl("wallet");
 
   return (
     <>
@@ -82,31 +115,43 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
             </LayoutGroup>
           </div>
 
-          {/* Right section - Controls (draggable) */}
-          <Reorder.Group
-            as="div"
-            axis="x"
-            values={headerControlOrder}
-            onReorder={onReorderHeaderControls}
-            className="flex items-center gap-1.5 sm:gap-2"
-          >
-            {headerControlOrder.map((controlId: string) => {
-              const control = getHeaderControl(controlId);
-              if (!control) return null;
-              return (
-                <Reorder.Item
-                  as="div"
-                  key={controlId}
-                  value={controlId}
-                  onDragStart={() => onDragStartControls()}
-                  onDragEnd={() => onDragEndControls()}
-                  className="flex cursor-grab items-center justify-center active:cursor-grabbing"
-                >
-                  <HeaderControlEntry control={control} viewProps={props} />
-                </Reorder.Item>
-              );
-            })}
-          </Reorder.Group>
+          {/* Right section - Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Desktop: Reorderable controls */}
+            <Reorder.Group
+              as="div"
+              axis="x"
+              values={desktopControls}
+              onReorder={handleDesktopReorder}
+              className="hidden items-center gap-1.5 lg:flex lg:gap-2"
+            >
+              {desktopControls.map((controlId: string) => {
+                const control = getHeaderControl(controlId);
+                if (!control) return null;
+                return (
+                  <Reorder.Item
+                    as="div"
+                    key={controlId}
+                    value={controlId}
+                    onDragStart={() => onDragStartControls()}
+                    onDragEnd={() => onDragEndControls()}
+                    className="flex cursor-grab items-center justify-center active:cursor-grabbing"
+                  >
+                    <HeaderControlEntry control={control} viewProps={props} />
+                  </Reorder.Item>
+                );
+              })}
+            </Reorder.Group>
+
+            {/* Mobile Menu */}
+            <div className="flex items-center gap-1.5 lg:hidden">
+              <NetworkToggle />
+              <MobileMenu viewProps={props} />
+              {walletControl && (
+                <HeaderControlEntry control={walletControl} viewProps={props} />
+              )}
+            </div>
+          </div>
         </div>
       </motion.header>
 
@@ -155,8 +200,9 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
         )}
       </AnimatePresence>
 
-      {/* Notification Panel */}
+      {/* Notification Panel - Desktop dropdown, Mobile drawer */}
       <NotificationPanel />
+      <MobileNotificationDrawer />
 
       {/* Disclaimer Window */}
       <AnimatePresence>
@@ -178,9 +224,14 @@ export function BridgeHeaderView(props: BridgeHeaderViewProps) {
         )}
       </AnimatePresence>
 
-      {/* Stats Window - Desktop only */}
+      {/* Stats Window */}
       <AnimatePresence>
-        {showStats && <StatsWindow onClose={onCloseStats} />}
+        {showStats && (
+          <>
+            <StatsWindow onClose={onCloseStats} />
+            <MobileStatsDrawer onClose={onCloseStats} />
+          </>
+        )}
       </AnimatePresence>
 
       {/* CCTP Explainer Modal */}

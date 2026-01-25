@@ -13,7 +13,6 @@ import {
   ArrowRight,
   X,
   Zap,
-  Wallet,
 } from "lucide-react";
 import {
   parseStepError,
@@ -45,9 +44,6 @@ export function TransactionWindowView({
   isCancelled,
   fromNetworkDisplayName,
   toNetworkDisplayName,
-  fromNetworkExplorerUrl,
-  toNetworkExplorerUrl,
-
   onDragStart,
   onDragEnd,
   onClose,

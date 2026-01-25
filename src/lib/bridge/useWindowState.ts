@@ -94,7 +94,7 @@ export function useWindowState({
   // Update current position when initial position changes
   useEffect(() => {
     setCurrentPosition(initialPosition);
-  }, [initialPosition.x, initialPosition.y]);
+  }, [initialPosition]);
 
   // Focus window on mount to give it highest z-index
   useEffect(() => {

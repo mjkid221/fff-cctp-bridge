@@ -14,8 +14,8 @@ export interface EstimateKeyParams {
 
 /**
  * Query key factory for bridge-related queries
- * Following TanStack Query best practices for key management
- * @see https://tanstack.com/query/latest/docs/framework/react/community/lukemorales-query-key-factory
+ * Inspired by TanStack Query best practices for key management
+ * @see https://github.com/lukemorales/query-key-factory
  */
 export const bridgeKeys = {
   // Root key for all bridge queries
@@ -35,10 +35,23 @@ export const bridgeKeys = {
   routes: () => [...bridgeKeys.all, "route"] as const,
   route: (from: SupportedChainId | null, to: SupportedChainId | null) =>
     [...bridgeKeys.routes(), { from, to }] as const,
+
+  // Transaction history queries
+  transactionHistories: () =>
+    [...bridgeKeys.all, "transactionHistory"] as const,
+  transactionHistory: (userAddress: string | null) =>
+    [...bridgeKeys.transactionHistories(), userAddress] as const,
 } as const;
 
 // Type helpers for query keys
 export type BalanceQueryKey = ReturnType<typeof bridgeKeys.balance>;
 export type EstimateQueryKey = ReturnType<typeof bridgeKeys.estimate>;
 export type RouteQueryKey = ReturnType<typeof bridgeKeys.route>;
-export type BridgeQueryKey = BalanceQueryKey | EstimateQueryKey | RouteQueryKey;
+export type TransactionHistoryQueryKey = ReturnType<
+  typeof bridgeKeys.transactionHistory
+>;
+export type BridgeQueryKey =
+  | BalanceQueryKey
+  | EstimateQueryKey
+  | RouteQueryKey
+  | TransactionHistoryQueryKey;

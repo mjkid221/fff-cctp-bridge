@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronDown, Wallet } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { formatAddress, getWalletName } from "./wallet-selector.hooks";
+import { formatAddress, getWalletName } from "./wallet-selector.utils";
 import type { WalletSelectorViewProps } from "./wallet-selector.types";
 
 export function WalletSelectorView({

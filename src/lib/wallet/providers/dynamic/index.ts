@@ -5,19 +5,7 @@
  */
 
 // Adapter for converting Dynamic wallets to IWallet
-export { DynamicWalletAdapter, getDynamicWalletAdapter } from "./adapter";
-
-// Wallet wrapper class
-export {
-  DynamicWalletWrapper,
-  isDynamicWalletWrapper,
-  getDynamicWallet,
-  type DynamicWallet,
-} from "./wallet-wrapper";
+export { DynamicWalletAdapter } from "./adapter";
 
 // Context hook for bridging Dynamic to IWalletContext
-export {
-  useDynamicWalletContext,
-  useDynamicLinkWalletModal,
-  useRawDynamicWallets,
-} from "./context";
+export { useDynamicWalletContext } from "./context";
