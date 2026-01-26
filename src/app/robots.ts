@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://www.fff-bridge.com/sitemap.xml",
+    sitemap: "https://www.fff-bridge.net/sitemap.xml",
   };
 }

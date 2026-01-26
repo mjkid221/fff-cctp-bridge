@@ -9,7 +9,7 @@ import { RootScrollArea } from "~/components/ui/scroll-area";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.fff-bridge.com"),
+  metadataBase: new URL("https://www.fff-bridge.net"),
   title: "FFF CCTP Bridge - Cross-Chain USDC Transfer",
   description:
     "Bridge USDC across chains instantly with Circle's Cross-Chain Transfer Protocol. Fast, secure transfers between Ethereum, Base, Arbitrum, and Solana.",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     title: "FFF CCTP Bridge - Cross-Chain USDC Transfer",
     description:
       "Bridge USDC across chains instantly with Circle's Cross-Chain Transfer Protocol",
-    url: "https://www.fff-bridge.com",
+    url: "https://www.fff-bridge.net",
     siteName: "FFF CCTP Bridge",
     type: "website",
     locale: "en_US",
