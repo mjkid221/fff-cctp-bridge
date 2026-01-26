@@ -54,7 +54,10 @@ async function getDB(): Promise<IDBPDatabase<StatsDB>> {
 /**
  * Generate composite key for stats lookup
  */
-function getStatsKey(userAddress: string, environment: NetworkEnvironment): string {
+function getStatsKey(
+  userAddress: string,
+  environment: NetworkEnvironment,
+): string {
   return `${userAddress.toLowerCase()}_${environment}`;
 }
 
