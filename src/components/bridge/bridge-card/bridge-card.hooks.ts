@@ -205,6 +205,9 @@ export function useBridgeCardState() {
       // when currentTransaction is set (which happens early in service.bridge())
       isInitiatingBridgeRef.current = true;
 
+      // Reset amount input for concurrent bridges - user can start entering new amount
+      setAmount("");
+
       const result = await executeBridge({
         fromChain,
         toChain,
@@ -312,7 +315,6 @@ export function useBridgeCardState() {
     fromChain &&
     toChain &&
     isValidAmount &&
-    !isBridging &&
     !isEstimating &&
     hasValidSourceWallet &&
     (useCustomAddress

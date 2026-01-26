@@ -131,6 +131,18 @@ Network configurations can be modified in `src/lib/bridge/networks.ts`.
 - **Wallet Integration**: Dynamic Labs
 - **Animation**: Motion (Framer Motion successor)
 
+## Patches
+
+This project includes patches to the Bridge Kit SDK to add support for networks that CCTP supports but the SDK hasn't officially added yet:
+
+- **Monad**: Added via pnpm patches to `@circle-fin/bridge-kit`, `@circle-fin/adapter-viem-v2`, `@circle-fin/adapter-solana`. CCTP supports Monad, but the official SDK hasn't been updated yet as of v1.3.0. This patch will likely be deprecated once Circle updates the Bridge Kit SDK with official Monad support.
+
+Patches are managed via pnpm and applied automatically on install.
+
+## Roadmap
+
+- **SUI Network Support**: The codebase is structured to support SUI once Circle adds it to the Bridge Kit SDK. When official support is available, SUI integration can be added with minimal changes.
+
 ## Scripts
 
 ```bash
@@ -171,7 +183,7 @@ Follow the [Container/Presentational pattern](https://www.patterns.dev/react/pre
 - **Presentational components**: Focus on UI rendering, receive data via props, minimal logic
 - **Container components**: Handle data fetching, state management, and business logic
 
-This approach makes it easy to create storybook stories for new components.
+This approach may come with some caveats (such as prop drilling and excessive re-rendering of children if implemented inadequately), but it makes it easy to create storybook stories for new components and helps with reusability.
 
 Example structure:
 ```
@@ -188,6 +200,7 @@ components/
 - Run `pnpm storybook` to develop and test components in isolation
 - Stories should cover different states and edge cases
 - You could also automate the process with Claude or AI assisted tooling
+- View the live Storybook at [fff-bridge-storybook.vercel.app](https://fff-bridge-storybook.vercel.app/)
 
 ## License
 
@@ -196,5 +209,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Links
 
 - [GitHub Repository](https://github.com/mjkid221/fff-cctp-bridge)
+- [Storybook](https://fff-bridge-storybook.vercel.app/)
 - [Bridge Kit Documentation](https://developers.circle.com/bridge-kit#bridge-kit)
 - [Twitter](https://x.com/mjkid0)

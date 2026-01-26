@@ -172,22 +172,25 @@ export class CCTPBridgeService implements IBridgeService {
   private wallets: IWallet[] = [];
 
   constructor(config: BridgeServiceConfig = {}) {
-    this.kit = new BridgeKit();
+    this.kit = new BridgeKit(); // Keep for estimate() - read-only operations don't need event isolation
     this.adapterFactory = config.adapterFactory ?? getAdapterFactory();
     this.balanceService = config.balanceService ?? getBalanceService();
     this.storage = config.storage ?? BridgeStorage;
-    this.eventManager = new BridgeEventManager(this.kit, this.storage);
+    this.eventManager = new BridgeEventManager(this.storage);
   }
 
   /**
    * Sync transaction state to all consumers (store, windows)
    * Uses queueMicrotask to ensure React processes updates immediately
+   *
+   * Note: We deliberately do NOT call setCurrentTransaction here to avoid
+   * overwriting state when multiple transactions run concurrently.
+   * Each window maintains its own transaction copy via updateTransactionInWindow.
    */
   private syncTransactionState(transaction: BridgeTransaction): void {
     queueMicrotask(() => {
       const state = useBridgeStore.getState();
       state.updateTransaction(transaction.id, transaction);
-      state.setCurrentTransaction(transaction);
       state.updateTransactionInWindow(transaction.id, transaction);
     });
   }
@@ -484,19 +487,24 @@ export class CCTPBridgeService implements IBridgeService {
 
     await this.storage.saveTransaction(transaction);
 
+    // Add transaction to Zustand array for stats tracking (so updateTransaction can find it)
+    useBridgeStore.getState().addTransaction(transaction);
+
     // Set current transaction before starting so event callbacks can update it
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
-    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
-      this.syncTransactionState(updatedTx);
-    });
+    // Create dedicated kit for this transaction with isolated event stream
+    const transactionKit = this.eventManager.createTransactionKit(
+      transaction.id,
+      (updatedTx) => this.syncTransactionState(updatedTx),
+    );
 
     try {
-      await this.executeBridgeOperation(context, transaction);
+      await this.executeBridgeOperation(context, transaction, transactionKit);
     } catch (error) {
       await this.handleBridgeError(transaction, error);
     } finally {
-      this.eventManager.untrackTransaction(transaction.id);
+      this.eventManager.disposeTransactionKit(transaction.id);
     }
 
     transaction.updatedAt = Date.now();
@@ -609,9 +617,11 @@ export class CCTPBridgeService implements IBridgeService {
     await this.storage.saveTransaction(transaction);
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
-    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
-      this.syncTransactionState(updatedTx);
-    });
+    // Create dedicated kit for retry operation with isolated event stream
+    const retryKit = this.eventManager.createTransactionKit(
+      transaction.id,
+      (updatedTx) => this.syncTransactionState(updatedTx),
+    );
 
     try {
       transaction.status = "bridging";
@@ -621,7 +631,7 @@ export class CCTPBridgeService implements IBridgeService {
       }
       await this.storage.saveTransaction(transaction);
 
-      const retryResult = await this.kit.retry(bridgeResult, {
+      const retryResult = await retryKit.retry(bridgeResult, {
         from: fromAdapter,
         to: toAdapter,
       });
@@ -631,7 +641,7 @@ export class CCTPBridgeService implements IBridgeService {
     } catch (error) {
       await this.handleBridgeError(transaction, error);
     } finally {
-      this.eventManager.untrackTransaction(transaction.id);
+      this.eventManager.disposeTransactionKit(transaction.id);
     }
 
     transaction.updatedAt = Date.now();
@@ -728,15 +738,16 @@ export class CCTPBridgeService implements IBridgeService {
     // Update store to indicate we're resuming
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
-    // Set up event tracking for real-time updates
-    this.eventManager.trackTransaction(transaction.id, (updatedTx) => {
-      this.syncTransactionState(updatedTx);
-    });
+    // Create dedicated kit for resume operation with isolated event stream
+    const resumeKit = this.eventManager.createTransactionKit(
+      transaction.id,
+      (updatedTx) => this.syncTransactionState(updatedTx),
+    );
 
     try {
       // Use kit.retry() to continue from where we left off
       // Bridge Kit's retry handles resumption internally based on bridgeResult state
-      const retryResult = await this.kit.retry(bridgeResult, {
+      const retryResult = await resumeKit.retry(bridgeResult, {
         from: fromAdapter,
         to: toAdapter,
       });
@@ -747,7 +758,7 @@ export class CCTPBridgeService implements IBridgeService {
       // If retry throws, handle the error but keep transaction resumable if possible
       await this.handleBridgeError(transaction, error);
     } finally {
-      this.eventManager.untrackTransaction(transaction.id);
+      this.eventManager.disposeTransactionKit(transaction.id);
     }
 
     transaction.updatedAt = Date.now();
@@ -1408,6 +1419,7 @@ export class CCTPBridgeService implements IBridgeService {
   private async executeBridgeOperation(
     context: BridgeOperationContext,
     transaction: BridgeTransaction,
+    kit: BridgeKit,
   ): Promise<void> {
     // Ensure destination chain is added BEFORE Bridge Kit tries to switch to it
     // This is critical because Bridge Kit uses the raw EIP-1193 provider directly
@@ -1427,7 +1439,8 @@ export class CCTPBridgeService implements IBridgeService {
     // This ensures the approve step shows "in_progress" immediately
     this.syncTransactionState(transaction);
 
-    const result: BridgeResult = await this.kit.bridge({
+    // Use the transaction-specific kit (events are routed to this transaction only)
+    const result: BridgeResult = await kit.bridge({
       from: { adapter: context.fromAdapter, chain: context.fromChain },
       to: {
         adapter: context.toAdapter,

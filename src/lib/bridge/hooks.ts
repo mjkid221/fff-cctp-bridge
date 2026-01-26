@@ -163,7 +163,6 @@ export function useBridge() {
   const userAddress = useBridgeStore((state) => state.userAddress);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const addTransaction = useBridgeStore((state) => state.addTransaction);
   const setCurrentTransaction = useBridgeStore(
     (state) => state.setCurrentTransaction,
   );
@@ -177,7 +176,7 @@ export function useBridge() {
         const service = getBridgeService();
         const transaction = await service.bridge(params);
 
-        addTransaction(transaction);
+        // Note: addTransaction is now called in service.bridge() for stats tracking
         setCurrentTransaction(transaction);
 
         void queryClient.invalidateQueries({
@@ -197,7 +196,7 @@ export function useBridge() {
         setIsLoading(false);
       }
     },
-    [addTransaction, setCurrentTransaction, userAddress, queryClient],
+    [setCurrentTransaction, userAddress, queryClient],
   );
 
   return { executeBridge, isLoading, error };

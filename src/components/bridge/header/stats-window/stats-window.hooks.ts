@@ -2,19 +2,20 @@
 
 import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useUserAddress } from "~/lib/bridge/store";
+import { useUserAddress, useEnvironment } from "~/lib/bridge/store";
 import { StatsStorage } from "~/lib/bridge/stats-storage";
 import type { StatsWindowProps, BridgeStats } from "./stats-window.types";
 
 export function useStatsWindowState({ onClose }: StatsWindowProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const userAddress = useUserAddress();
+  const environment = useEnvironment();
 
   const { data: rawStats, isLoading } = useQuery({
-    queryKey: ["userStats", userAddress],
+    queryKey: ["userStats", userAddress, environment],
     queryFn: async () => {
       if (!userAddress) return null;
-      return StatsStorage.getOrCreate(userAddress);
+      return StatsStorage.getOrCreate(userAddress, environment);
     },
     enabled: !!userAddress,
   });

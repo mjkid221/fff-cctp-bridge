@@ -12,7 +12,6 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   ArrowRight,
-  Loader2,
   AlertCircle,
   AlertTriangle,
   ChevronRight,
@@ -23,6 +22,7 @@ import { NETWORK_CONFIGS } from "~/lib/bridge/networks";
 import { getAttestationTimeDisplay } from "~/lib/bridge/attestation-times";
 import { getNetworkTypeLabel } from "~/lib/bridge/utils";
 import { DraggableFeeSummary } from "./fee-summary";
+import { WindowPortal } from "~/components/ui/window-portal";
 import type { BridgeCardViewProps } from "./bridge-card.types";
 import type { SupportedChainId } from "~/lib/bridge/networks";
 
@@ -39,18 +39,8 @@ interface BridgeButtonState {
 }
 
 function getBridgeButtonContent(state: BridgeButtonState): React.ReactNode {
-  if (state.isBridging) {
-    return (
-      <motion.div
-        className="flex items-center gap-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <Loader2 className="size-4 animate-spin sm:size-5" />
-        <span>Processing...</span>
-      </motion.div>
-    );
-  }
+  // Form state checks first - prompt user for missing input
+  // This ensures after amount reset, user sees "Enter Amount" not "Processing..."
   if (!state.isInitialized) return <span>Connect Wallet</span>;
   if (!state.fromChain || !state.toChain) return <span>Select Networks</span>;
   if (state.needsSourceWallet) return <span>Select Source Wallet</span>;
@@ -60,6 +50,7 @@ function getBridgeButtonContent(state: BridgeButtonState): React.ReactNode {
     return <span>Connect {state.destNetworkName} Wallet</span>;
   }
   if (!state.isValidAmount) return <span>Enter Amount</span>;
+
   return (
     <motion.div className="flex items-center gap-2">
       <span>Bridge USDC</span>
@@ -532,20 +523,22 @@ export function BridgeCardView({
           </div>
         </motion.div>
 
-        {/* Fee Summary Card - Desktop only */}
-        <AnimatePresence>
-          {showFeeDetails && fromChain && toChain && (
-            <DraggableFeeSummary
-              estimate={estimate}
-              isEstimating={isEstimating}
-              fromChain={fromChain}
-              toChain={toChain}
-              amount={amount || "0.00"}
-              transferMethod={transferMethod}
-              onClose={onToggleFeeDetails}
-            />
-          )}
-        </AnimatePresence>
+        {/* Fee Summary Card. TODO: refactor to move into a shared root with other windows */}
+        <WindowPortal>
+          <AnimatePresence>
+            {showFeeDetails && fromChain && toChain && (
+              <DraggableFeeSummary
+                estimate={estimate}
+                isEstimating={isEstimating}
+                fromChain={fromChain}
+                toChain={toChain}
+                amount={amount || "0.00"}
+                transferMethod={transferMethod}
+                onClose={onToggleFeeDetails}
+              />
+            )}
+          </AnimatePresence>
+        </WindowPortal>
       </div>
     </>
   );

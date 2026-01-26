@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 import { BridgeStorage } from "../../storage";
 import { StatsStorage } from "../../stats-storage";
+import { NETWORK_CONFIGS } from "../../networks";
 import type { BridgeState, TransactionSlice } from "../types";
 
 export const createTransactionSlice: StateCreator<
@@ -68,9 +69,12 @@ export const createTransactionSlice: StateCreator<
         const amount = parseFloat(transaction.amount || "0");
         const isFast = transaction.transferMethod === "fast";
         const providerFee = parseFloat(transaction.providerFeeUsdc || "0");
+        const environment =
+          NETWORK_CONFIGS[transaction.fromChain]?.environment ?? "mainnet";
 
         void StatsStorage.incrementOnComplete(
           transaction.userAddress,
+          environment,
           amount,
           isFast,
           providerFee,

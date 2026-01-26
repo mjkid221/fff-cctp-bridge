@@ -1,11 +1,13 @@
 /**
  * Bridge Event Manager
  *
- * Subscribes to Bridge Kit events and provides real-time step updates
- * to storage and UI as bridge operations execute.
+ * Creates per-transaction BridgeKit instances to provide isolated event streams
+ * for concurrent bridge operations. Each transaction gets its own kit with
+ * dedicated event listeners, enabling multiple bridges to run simultaneously
+ * without event cross-contamination.
  */
 
-import type { BridgeKit } from "@circle-fin/bridge-kit";
+import { BridgeKit } from "@circle-fin/bridge-kit";
 import type { BridgeTransaction } from "./types";
 import type { BridgeStorage } from "./storage";
 
@@ -28,48 +30,102 @@ interface NormalizedBridgeEvent {
 }
 
 /**
- * Centralized manager for Bridge Kit event subscriptions
- * Handles real-time step updates as bridge operations execute
+ * Entry for tracking a transaction's kit instance and cleanup
+ */
+interface TransactionKitEntry {
+  kit: BridgeKit;
+  callback: (tx: BridgeTransaction) => void;
+  cleanup: () => void;
+}
+
+/**
+ * Centralized manager for Bridge Kit instances per transaction.
+ * Each transaction gets its own BridgeKit with isolated event streams,
+ * enabling true concurrent transaction support.
  */
 export class BridgeEventManager {
-  private kit: BridgeKit;
   private storage: typeof BridgeStorage;
-  private trackedTransactions: Map<string, (tx: BridgeTransaction) => void>;
-  private eventHandlers: Array<() => void>; // Cleanup functions
+  private transactionKits: Map<string, TransactionKitEntry>;
 
-  constructor(kit: BridgeKit, storage: typeof BridgeStorage) {
-    this.kit = kit;
+  constructor(storage: typeof BridgeStorage) {
     this.storage = storage;
-    this.trackedTransactions = new Map();
-    this.eventHandlers = [];
-
-    this.setupEventListeners();
+    this.transactionKits = new Map();
   }
 
   /**
-   * Subscribe to all Bridge Kit events using wildcard listener
+   * Create a new BridgeKit instance for a transaction.
+   * Each transaction gets its own kit with isolated event streams.
+   *
+   * @param txId - Transaction ID to create kit for
+   * @param callback - Called when transaction is updated by events
+   * @returns The BridgeKit instance to use for this transaction
    */
-  private setupEventListeners(): void {
+  createTransactionKit(
+    txId: string,
+    callback: (tx: BridgeTransaction) => void,
+  ): BridgeKit {
+    // Dispose any existing kit for this transaction (e.g., retry scenario)
+    this.disposeTransactionKit(txId);
+
+    const kit = new BridgeKit();
+
+    // Setup event listener scoped to this specific transaction
     const handler = (event: BridgeKitEventHandler) => {
-      // Normalize the event for internal handling
+      // Guard: ignore stale events from disposed/replaced kits
+      // This prevents race conditions where events from a previous kit
+      // (after dispose/recreate) could update the wrong transaction
+      if (this.transactionKits.get(txId)?.kit !== kit) return;
+
       const normalizedEvent: NormalizedBridgeEvent = {
         method: event.method,
         values: event.values as NormalizedBridgeEvent["values"],
       };
-      // Update all tracked transactions based on event
-      for (const [txId, callback] of this.trackedTransactions.entries()) {
-        void this.handleStepUpdate(txId, normalizedEvent, callback);
-      }
+      void this.handleStepUpdate(txId, normalizedEvent, callback);
     };
 
-    this.kit.on("*", handler);
+    kit.on("*", handler);
+    const cleanup = () => kit.off("*", handler);
 
-    // Store cleanup function
-    this.eventHandlers.push(() => this.kit.off("*", handler));
+    this.transactionKits.set(txId, { kit, callback, cleanup });
+    return kit;
   }
 
   /**
-   * Handle a step update from a Bridge Kit event
+   * Get existing kit for a transaction (for checking if tracked)
+   *
+   * @param txId - Transaction ID to get kit for
+   * @returns The BridgeKit instance if tracked, undefined otherwise
+   */
+  getTransactionKit(txId: string): BridgeKit | undefined {
+    return this.transactionKits.get(txId)?.kit;
+  }
+
+  /**
+   * Clean up kit when transaction completes.
+   * Removes event listeners and deletes from tracking map.
+   *
+   * @param txId - Transaction ID to stop tracking
+   */
+  disposeTransactionKit(txId: string): void {
+    const entry = this.transactionKits.get(txId);
+    if (entry) {
+      entry.cleanup();
+      this.transactionKits.delete(txId);
+    }
+  }
+
+  /**
+   * Clean up all event listeners and kits.
+   * Should be called when service is reset or disposed.
+   */
+  dispose(): void {
+    this.transactionKits.forEach((entry) => entry.cleanup());
+    this.transactionKits.clear();
+  }
+
+  /**
+   * Handle a step update from a Bridge Kit event.
+   * Updates the transaction in storage and calls the callback.
    */
   private async handleStepUpdate(
     txId: string,
@@ -124,38 +180,5 @@ export class BridgeEventManager {
     await this.storage.saveTransaction(tx);
 
     callback(tx);
-  }
-
-  /**
-   * Start tracking a transaction's events
-   *
-   * @param txId - Transaction ID to track
-   * @param callback - Called when transaction is updated by events
-   */
-  trackTransaction(
-    txId: string,
-    callback: (tx: BridgeTransaction) => void,
-  ): void {
-    this.trackedTransactions.set(txId, callback);
-  }
-
-  /**
-   * Stop tracking a transaction
-   *
-   * @param txId - Transaction ID to stop tracking
-   */
-  untrackTransaction(txId: string): void {
-    this.trackedTransactions.delete(txId);
-  }
-
-  /**
-   * Clean up all event listeners
-   * Should be called when service is reset or disposed
-   */
-  dispose(): void {
-    // Clean up all event listeners
-    this.eventHandlers.forEach((cleanup) => cleanup());
-    this.eventHandlers = [];
-    this.trackedTransactions.clear();
   }
 }

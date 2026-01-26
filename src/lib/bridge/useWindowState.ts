@@ -118,7 +118,8 @@ export function useWindowState({
 
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
-  }, []);
+    focusWindow(windowType);
+  }, [focusWindow, windowType]);
 
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);

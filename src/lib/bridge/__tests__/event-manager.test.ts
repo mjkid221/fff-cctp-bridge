@@ -2,14 +2,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BridgeEventManager } from "../event-manager";
 import type { BridgeTransaction } from "../types";
 
-// Mock BridgeKit
+// Mock BridgeKit module
 const mockOn = vi.fn();
 const mockOff = vi.fn();
+const mockBridge = vi.fn();
+const mockRetry = vi.fn();
 
-const createMockBridgeKit = () => ({
-  on: mockOn,
-  off: mockOff,
-});
+vi.mock("@circle-fin/bridge-kit", () => ({
+  BridgeKit: vi.fn().mockImplementation(() => ({
+    on: mockOn,
+    off: mockOff,
+    bridge: mockBridge,
+    retry: mockRetry,
+  })),
+}));
 
 // Mock storage
 const createMockStorage = () => ({
@@ -52,7 +58,6 @@ function createMockTransaction(
 }
 
 describe("BridgeEventManager", () => {
-  let mockKit: ReturnType<typeof createMockBridgeKit>;
   let mockStorage: ReturnType<typeof createMockStorage>;
   let eventManager: BridgeEventManager;
   let eventHandler: (event: {
@@ -61,7 +66,6 @@ describe("BridgeEventManager", () => {
   }) => void;
 
   beforeEach(() => {
-    mockKit = createMockBridgeKit();
     mockStorage = createMockStorage();
 
     // Capture the event handler when it's registered
@@ -74,49 +78,57 @@ describe("BridgeEventManager", () => {
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    eventManager = new BridgeEventManager(mockKit as any, mockStorage as any);
+    eventManager = new BridgeEventManager(mockStorage as any);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("constructor", () => {
-    it("should register wildcard event listener", () => {
-      expect(mockOn).toHaveBeenCalledWith("*", expect.any(Function));
-    });
-  });
-
-  describe("trackTransaction", () => {
-    it("should register a transaction for tracking", () => {
+  describe("createTransactionKit", () => {
+    it("should create a new kit for transaction and register event listener", () => {
       const callback = vi.fn();
 
-      eventManager.trackTransaction("tx-123", callback);
+      const kit = eventManager.createTransactionKit("tx-123", callback);
 
-      // Verify internal state by triggering an event
-      // The callback should be called when relevant events fire
+      expect(kit).toBeDefined();
+      expect(mockOn).toHaveBeenCalledWith("*", expect.any(Function));
     });
 
-    it("should allow multiple transactions to be tracked", () => {
+    it("should allow multiple transactions with separate kits", () => {
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
-      eventManager.trackTransaction("tx-1", callback1);
-      eventManager.trackTransaction("tx-2", callback2);
+      const kit1 = eventManager.createTransactionKit("tx-1", callback1);
+      const kit2 = eventManager.createTransactionKit("tx-2", callback2);
 
-      // Both should be registered (no errors thrown)
+      expect(kit1).toBeDefined();
+      expect(kit2).toBeDefined();
+      // Each creates a new kit, so on() is called twice
+      expect(mockOn).toHaveBeenCalledTimes(2);
+    });
+
+    it("should dispose existing kit when creating new one for same transaction", () => {
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+
+      eventManager.createTransactionKit("tx-123", callback1);
+      eventManager.createTransactionKit("tx-123", callback2);
+
+      // First kit should be disposed (off called)
+      expect(mockOff).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe("untrackTransaction", () => {
-    it("should remove a transaction from tracking", async () => {
+  describe("disposeTransactionKit", () => {
+    it("should remove event listener and clean up kit", async () => {
       const callback = vi.fn();
       const tx = createMockTransaction({ id: "tx-123" });
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
-      eventManager.untrackTransaction("tx-123");
+      eventManager.createTransactionKit("tx-123", callback);
+      eventManager.disposeTransactionKit("tx-123");
 
       // Trigger an event
       eventHandler({ method: "approve", values: { txHash: "0xabc" } });
@@ -124,8 +136,9 @@ describe("BridgeEventManager", () => {
       // Wait for async operations
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // Callback should NOT be called since transaction was untracked
+      // Callback should NOT be called since transaction was disposed
       expect(callback).not.toHaveBeenCalled();
+      expect(mockOff).toHaveBeenCalledWith("*", expect.any(Function));
     });
   });
 
@@ -136,7 +149,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       // Trigger approve event
       eventHandler({ method: "approve", values: { txHash: "0xapprove123" } });
@@ -159,7 +172,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       // Trigger burn event
       eventHandler({ method: "burn", values: { txHash: "0xburn456" } });
@@ -179,7 +192,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       // Trigger attestation event
       eventHandler({
@@ -200,7 +213,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       // Trigger mint event
       eventHandler({ method: "mint", values: { txHash: "0xmint789" } });
@@ -248,7 +261,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       // Approve completes
       eventHandler({ method: "approve", values: { txHash: "0xapprove" } });
@@ -273,7 +286,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       eventHandler({ method: "approve", values: { txHash: "0xabc" } });
 
@@ -290,7 +303,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
 
       eventHandler({ method: "unknownMethod", values: {} });
 
@@ -305,7 +318,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(undefined);
 
-      eventManager.trackTransaction("non-existent", callback);
+      eventManager.createTransactionKit("non-existent", callback);
 
       eventHandler({ method: "approve", values: { txHash: "0xabc" } });
 
@@ -317,10 +330,17 @@ describe("BridgeEventManager", () => {
   });
 
   describe("dispose", () => {
-    it("should remove event listeners", () => {
+    it("should remove all event listeners", () => {
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+
+      eventManager.createTransactionKit("tx-1", callback1);
+      eventManager.createTransactionKit("tx-2", callback2);
+
       eventManager.dispose();
 
-      expect(mockOff).toHaveBeenCalledWith("*", expect.any(Function));
+      // Both kits should have their listeners removed
+      expect(mockOff).toHaveBeenCalledTimes(2);
     });
 
     it("should clear all tracked transactions", async () => {
@@ -329,7 +349,7 @@ describe("BridgeEventManager", () => {
 
       mockStorage.getTransaction.mockResolvedValue(tx);
 
-      eventManager.trackTransaction("tx-123", callback);
+      eventManager.createTransactionKit("tx-123", callback);
       eventManager.dispose();
 
       // Trigger event after dispose
@@ -339,6 +359,23 @@ describe("BridgeEventManager", () => {
 
       // Callback should not be called after dispose
       expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getTransactionKit", () => {
+    it("should return kit for tracked transaction", () => {
+      const callback = vi.fn();
+
+      const kit = eventManager.createTransactionKit("tx-123", callback);
+      const retrievedKit = eventManager.getTransactionKit("tx-123");
+
+      expect(retrievedKit).toBe(kit);
+    });
+
+    it("should return undefined for untracked transaction", () => {
+      const kit = eventManager.getTransactionKit("non-existent");
+
+      expect(kit).toBeUndefined();
     });
   });
 });

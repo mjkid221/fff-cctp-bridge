@@ -3,9 +3,11 @@
  *
  * Stores lifetime stats per user separately from transaction history,
  * enabling safe pruning of old transactions without losing stats.
+ * Stats are tracked separately for mainnet and testnet environments.
  */
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { NetworkEnvironment } from "./networks";
 
 interface StatsDB extends DBSchema {
   stats: {
@@ -16,6 +18,7 @@ interface StatsDB extends DBSchema {
 
 export interface UserStats {
   userAddress: string;
+  environment: NetworkEnvironment;
   totalBridged: number;
   totalTransactions: number;
   totalFeesPaid: number;
@@ -25,7 +28,7 @@ export interface UserStats {
 }
 
 const DB_NAME = "cctp-bridge-stats";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbInstance: IDBPDatabase<StatsDB> | null = null;
 
@@ -33,26 +36,51 @@ async function getDB(): Promise<IDBPDatabase<StatsDB>> {
   if (dbInstance) return dbInstance;
 
   dbInstance = await openDB<StatsDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      db.createObjectStore("stats", { keyPath: "userAddress" });
+    upgrade(db, oldVersion) {
+      // Delete old object store if upgrading from version 1
+      if (oldVersion === 1 && db.objectStoreNames.contains("stats")) {
+        db.deleteObjectStore("stats");
+      }
+      // Create new object store without keyPath (we'll use explicit keys)
+      if (!db.objectStoreNames.contains("stats")) {
+        db.createObjectStore("stats");
+      }
     },
   });
 
   return dbInstance;
 }
 
+/**
+ * Generate composite key for stats lookup
+ */
+function getStatsKey(
+  userAddress: string,
+  environment: NetworkEnvironment,
+): string {
+  return `${userAddress.toLowerCase()}_${environment}`;
+}
+
 export class StatsStorage {
-  static async get(userAddress: string): Promise<UserStats | undefined> {
+  static async get(
+    userAddress: string,
+    environment: NetworkEnvironment,
+  ): Promise<UserStats | undefined> {
     const db = await getDB();
-    return db.get("stats", userAddress);
+    const key = getStatsKey(userAddress, environment);
+    return db.get("stats", key);
   }
 
-  static async getOrCreate(userAddress: string): Promise<UserStats> {
-    const existing = await this.get(userAddress);
+  static async getOrCreate(
+    userAddress: string,
+    environment: NetworkEnvironment,
+  ): Promise<UserStats> {
+    const existing = await this.get(userAddress, environment);
     if (existing) return existing;
 
     const newStats: UserStats = {
-      userAddress,
+      userAddress: userAddress.toLowerCase(),
+      environment,
       totalBridged: 0,
       totalTransactions: 0,
       totalFeesPaid: 0,
@@ -67,16 +95,18 @@ export class StatsStorage {
 
   static async save(stats: UserStats): Promise<void> {
     const db = await getDB();
-    await db.put("stats", { ...stats, lastUpdated: Date.now() });
+    const key = getStatsKey(stats.userAddress, stats.environment);
+    await db.put("stats", { ...stats, lastUpdated: Date.now() }, key);
   }
 
   static async incrementOnComplete(
     userAddress: string,
+    environment: NetworkEnvironment,
     amount: number,
     isFast: boolean,
     providerFee = 0,
   ): Promise<void> {
-    const stats = await this.getOrCreate(userAddress);
+    const stats = await this.getOrCreate(userAddress, environment);
 
     stats.totalBridged += amount;
     stats.totalTransactions += 1;
@@ -91,8 +121,12 @@ export class StatsStorage {
     await this.save(stats);
   }
 
-  static async clear(userAddress: string): Promise<void> {
+  static async clear(
+    userAddress: string,
+    environment: NetworkEnvironment,
+  ): Promise<void> {
     const db = await getDB();
-    await db.delete("stats", userAddress);
+    const key = getStatsKey(userAddress, environment);
+    await db.delete("stats", key);
   }
 }
