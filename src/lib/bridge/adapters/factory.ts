@@ -78,11 +78,7 @@ export class EVMAdapterCreator implements IAdapterCreator {
     }
 
     try {
-      console.log(`[EVMAdapter] Switching to chain ${targetChainId}...`);
       await wallet.switchNetwork(targetChainId);
-      console.log(
-        `[EVMAdapter] Successfully switched to chain ${targetChainId}`,
-      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -94,10 +90,6 @@ export class EVMAdapterCreator implements IAdapterCreator {
         message.includes("Try adding the chain");
 
       if (isUnrecognizedChain && chainId && wallet.addChain) {
-        console.log(
-          `[EVMAdapter] Chain ${targetChainId} not found in wallet, attempting to add...`,
-        );
-
         const viemChain = getViemChain(chainId);
         if (!viemChain) {
           throw new Error(
@@ -106,14 +98,7 @@ export class EVMAdapterCreator implements IAdapterCreator {
         }
 
         await wallet.addChain(viemChain);
-        console.log(
-          `[EVMAdapter] Chain ${targetChainId} added, now switching...`,
-        );
-
         await wallet.switchNetwork(targetChainId);
-        console.log(
-          `[EVMAdapter] Successfully added and switched to chain ${targetChainId}`,
-        );
         return;
       }
 
@@ -173,31 +158,23 @@ export class SolanaAdapterCreator implements IAdapterCreator {
 
     const solanaProvider = await wallet.getSolanaProvider();
 
-    // Determine RPC endpoint based on chain environment
-    let rpcEndpoint: string;
-    if (chainId) {
+    let connection: Connection;
+
+    if (wallet.getSolanaConnection) {
+      // Use wallet's connection (preferred - respects user's RPC configuration)
+      connection = await wallet.getSolanaConnection();
+    } else if (chainId) {
+      // Fall back to default RPC based on chain environment
       const network = NETWORK_CONFIGS[chainId];
-      rpcEndpoint =
+      const rpcEndpoint =
         network?.environment === "mainnet"
           ? SOLANA_RPC_ENDPOINTS.mainnet
           : SOLANA_RPC_ENDPOINTS.testnet;
-      console.log(
-        `[SolanaAdapter] Using ${network?.environment} RPC for chain ${chainId}: ${rpcEndpoint}`,
-      );
-    } else if (wallet.getSolanaConnection) {
-      // Fallback to wallet's current RPC if no chain specified
-      const connection = await wallet.getSolanaConnection();
-      rpcEndpoint = connection.rpcEndpoint;
-      console.log(
-        `[SolanaAdapter] Using wallet RPC (no chain specified): ${rpcEndpoint}`,
-      );
+      connection = new Connection(rpcEndpoint);
     } else {
-      // Default to mainnet if we can't determine
-      rpcEndpoint = SOLANA_RPC_ENDPOINTS.mainnet;
-      console.log(`[SolanaAdapter] Defaulting to mainnet RPC: ${rpcEndpoint}`);
+      // Default to mainnet if we can't determine (likely won't happen in practice)
+      connection = new Connection(SOLANA_RPC_ENDPOINTS.mainnet);
     }
-
-    const connection = new Connection(rpcEndpoint);
 
     return await createSolanaAdapter({
       provider: solanaProvider,
