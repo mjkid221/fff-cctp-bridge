@@ -295,6 +295,88 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   /**
+   * Get a fresh (uncached) adapter for a specific chain
+   * Use this for bridge/retry/resume operations to avoid concurrent transaction conflicts
+   * where multiple transactions sharing the same adapter can cause duplicate wallet popups
+   */
+  private async getTransactionAdapterForChain(
+    chain: SupportedChainId,
+  ): Promise<AdapterContext["adapter"]> {
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    const compatibleWallet = this.wallets.find((w) => {
+      try {
+        const creator = this.adapterFactory.getCreator(network.type);
+        return creator?.canHandle(w) ?? false;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!compatibleWallet) {
+      throw new Error(
+        `No compatible wallet connected for ${network.type} network. Please connect a ${network.type.toUpperCase()} wallet first.`,
+      );
+    }
+
+    try {
+      return await this.adapterFactory.createTransactionAdapter(
+        compatibleWallet,
+        network.type,
+        chain,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Failed to get adapter for ${chain}: ${message}`);
+    }
+  }
+
+  /**
+   * Get a fresh (uncached) adapter for a specific chain using an explicit wallet
+   * Use this for bridge/retry/resume operations to avoid concurrent transaction conflicts
+   */
+  private async getTransactionAdapterForChainWithWallet(
+    chain: SupportedChainId,
+    wallet?: IWallet,
+  ): Promise<AdapterContext["adapter"]> {
+    const network = NETWORK_CONFIGS[chain];
+    if (!network) {
+      throw new Error(`Invalid chain: ${chain}`);
+    }
+
+    const targetWallet =
+      wallet ??
+      this.wallets.find((w) => {
+        try {
+          const creator = this.adapterFactory.getCreator(network.type);
+          return creator?.canHandle(w) ?? false;
+        } catch {
+          return false;
+        }
+      });
+
+    if (!targetWallet) {
+      throw new Error(
+        `No compatible wallet for ${network.type} network. Please connect a ${network.type.toUpperCase()} wallet first.`,
+      );
+    }
+
+    try {
+      return await this.adapterFactory.createTransactionAdapter(
+        targetWallet,
+        network.type,
+        chain,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Failed to get adapter for ${chain}: ${message}`);
+    }
+  }
+
+  /**
    * Get the wallet address for a specific chain
    * Returns the address of the provided wallet or finds a compatible wallet
    */
@@ -543,8 +625,9 @@ export class CCTPBridgeService implements IBridgeService {
       );
     }
 
-    const fromAdapter = await this.getAdapterForChain(originalTx.fromChain);
-    const toAdapter = await this.getAdapterForChain(originalTx.toChain);
+    // Use uncached adapters for retry to avoid concurrent transaction conflicts
+    const fromAdapter = await this.getTransactionAdapterForChain(originalTx.fromChain);
+    const toAdapter = await this.getTransactionAdapterForChain(originalTx.toChain);
     const bridgeResult = originalTx.bridgeResult as BridgeResult;
 
     // Ensure destination chain is added BEFORE Bridge Kit execution
@@ -701,8 +784,9 @@ export class CCTPBridgeService implements IBridgeService {
       );
     }
 
-    const fromAdapter = await this.getAdapterForChain(transaction.fromChain);
-    const toAdapter = await this.getAdapterForChain(transaction.toChain);
+    // Use uncached adapters for resume to avoid concurrent transaction conflicts
+    const fromAdapter = await this.getTransactionAdapterForChain(transaction.fromChain);
+    const toAdapter = await this.getTransactionAdapterForChain(transaction.toChain);
     const bridgeResult = transaction.bridgeResult as BridgeResult;
 
     // Ensure destination chain is added BEFORE Bridge Kit execution
@@ -1333,12 +1417,13 @@ export class CCTPBridgeService implements IBridgeService {
       params.recipientAddress ??
       this.getWalletAddressForChain(params.toChain, params.destWallet);
 
-    // Create adapters using explicit wallets if provided
-    const fromAdapter = await this.getAdapterForChainWithWallet(
+    // Create uncached adapters for bridge operation to avoid concurrent transaction conflicts
+    // where multiple transactions sharing the same adapter can cause duplicate wallet popups
+    const fromAdapter = await this.getTransactionAdapterForChainWithWallet(
       params.fromChain,
       params.sourceWallet,
     );
-    const toAdapter = await this.getAdapterForChainWithWallet(
+    const toAdapter = await this.getTransactionAdapterForChainWithWallet(
       params.toChain,
       params.destWallet,
     );

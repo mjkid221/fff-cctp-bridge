@@ -278,6 +278,37 @@ export class AdapterFactory {
   }
 
   /**
+   * Create a fresh adapter for a transaction (not cached)
+   * Use this for bridge/retry/resume operations to avoid concurrent transaction conflicts
+   * where multiple transactions sharing the same adapter can cause duplicate wallet popups
+   *
+   * @param wallet - The wallet to create an adapter for
+   * @param networkType - The network type (evm, solana, etc.)
+   * @param chainId - Optional chain ID for environment-specific RPC selection
+   */
+  async createTransactionAdapter(
+    wallet: IWallet,
+    networkType: NetworkType,
+    chainId?: SupportedChainId,
+  ): Promise<BridgeAdapter> {
+    // Get the appropriate creator
+    const creator = this.creators.get(networkType);
+    if (!creator) {
+      throw new Error(`No adapter creator registered for ${networkType}`);
+    }
+
+    // Verify wallet compatibility
+    if (!creator.canHandle(wallet)) {
+      throw new Error(
+        `Wallet ${wallet.connectorKey} is not compatible with ${networkType}`,
+      );
+    }
+
+    // Create fresh adapter without caching
+    return creator.createAdapter(wallet, chainId);
+  }
+
+  /**
    * Clear adapter cache for a specific wallet or all wallets
    */
   clearCache(walletAddress?: string): void {
