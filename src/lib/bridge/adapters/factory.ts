@@ -15,9 +15,9 @@ import {
 } from "../networks";
 import { getViemChain } from "../chain-utils";
 
-// Solana RPC endpoints (from Circle's adapter defaults)
+// Solana RPC endpoints
 const SOLANA_RPC_ENDPOINTS = {
-  mainnet: "https://solana-mainnet.public.blastapi.io",
+  mainnet: "https://api.mainnet-beta.solana.com/",
   testnet: "https://api.devnet.solana.com",
 } as const;
 
