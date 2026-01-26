@@ -1423,6 +1423,10 @@ export class CCTPBridgeService implements IBridgeService {
 
     await this.storage.saveTransaction(transaction);
 
+    // Sync state to UI BEFORE blocking call to kit.bridge()
+    // This ensures the approve step shows "in_progress" immediately
+    this.syncTransactionState(transaction);
+
     const result: BridgeResult = await this.kit.bridge({
       from: { adapter: context.fromAdapter, chain: context.fromChain },
       to: {
@@ -1545,6 +1549,24 @@ export class CCTPBridgeService implements IBridgeService {
           );
         }
         return;
+      }
+
+      // Guard: Never downgrade a completed step unless Bridge Kit marks it as failed
+      // This prevents losing progress when resuming and Bridge Kit returns steps as "pending"
+      if (matchingStep.status === "completed" && resultStep.state !== "error") {
+        // Preserve completed status, but still capture txHash if available
+        if (
+          "txHash" in resultStep &&
+          resultStep.txHash &&
+          !matchingStep.txHash
+        ) {
+          matchingStep.txHash = String(resultStep.txHash);
+        }
+        // Track state for attestation step logic
+        if (stepName === "burn") burnCompleted = true;
+        if (stepName === "mint") mintStartedOrCompleted = true;
+        matchingStep.timestamp = Date.now();
+        return; // Skip - step is already completed
       }
 
       if (resultStep.state === "success") {
