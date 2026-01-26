@@ -4,6 +4,10 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "safe-install": "pnpm install && pnpm exec allow-scripts",
+    "allow-scripts": "pnpm exec allow-scripts",
+    "allow-scripts:generate": "pnpm exec allow-scripts auto",
+    "allow-scripts:analyze": "can-i-ignore-scripts",
     "analyze": "ANALYZE=true pnpm build",
     "build": "next build && pnpm build-storybook",
     "check": "next lint && tsc --noEmit",
@@ -20,6 +24,8 @@
     "typecheck": "tsc --noEmit",
     "pretest": "playwright install --with-deps chromium",
     "knip": "knip",
+    "audit": "pnpm audit --audit-level=high",
+    "audit:fix": "pnpm audit --fix",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -73,6 +79,8 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.0",
     "@eslint/eslintrc": "^3.3.1",
+    "@lavamoat/allow-scripts": "^3.4.2",
+    "@lavamoat/preinstall-always-fail": "^2.1.1",
     "@next/bundle-analyzer": "^16.0.10",
     "@storybook/addon-a11y": "^10.2.0",
     "@storybook/addon-docs": "^10.2.0",
@@ -89,6 +97,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/browser-playwright": "4.0.14",
     "@vitest/coverage-v8": "4.0.14",
+    "can-i-ignore-scripts": "0.4.1",
     "eslint": "^9.23.0",
     "eslint-config-next": "^15.5.7",
     "eslint-plugin-storybook": "^10.2.0",
@@ -96,6 +105,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^27.4.0",
     "knip": "^5.81.0",
+    "lavamoat": "^10.1.0",
     "playwright": "^1.58.0",
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
@@ -113,5 +123,21 @@
   "ct3aMetadata": {
     "initVersion": "7.40.0"
   },
-  "packageManager": "pnpm@10.12.4"
+  "packageManager": "pnpm@10.12.4",
+  "lavamoat": {
+    "allowScripts": {
+      "playwright": true,
+      "esbuild": true,
+      "@esbuild/darwin-arm64": true,
+      "@esbuild/darwin-x64": true,
+      "@esbuild/linux-x64": true,
+      "sharp": false,
+      "bigint-buffer": false,
+      "bufferutil": false,
+      "utf-8-validate": false,
+      "unrs-resolver": false,
+      "msw": false,
+      "@lavamoat/preinstall-always-fail": false
+    }
+  }
 }

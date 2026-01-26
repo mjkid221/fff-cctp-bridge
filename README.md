@@ -146,6 +146,49 @@ pnpm test         # Run tests
 
 Contributions are welcome. Please open an issue to discuss proposed changes before submitting a pull request.
 
+### Security Requirements
+
+This project uses [LavaMoat](https://github.com/LavaMoat/LavaMoat) to protect against supply chain attacks. When adding new dependencies:
+
+1. **Run safe-install**: Always use `pnpm safe-install` instead of `pnpm install`
+2. **Configure allow-scripts**: If a new dependency has install scripts, you must explicitly add it to the `lavamoat.allowScripts` section in `package.json`
+   - Set to `true` if the script is required for the package to function
+   - Set to `false` if the package works without running its install script
+3. **CI will fail** if a dependency with lifecycle scripts is not configured
+
+For more details, see the [LavaMoat allow-scripts documentation](https://github.com/LavaMoat/LavaMoat/blob/main/packages/allow-scripts/README.md).
+
+### Component Guidelines
+
+When creating new components, please follow these conventions:
+
+**Naming Convention:**
+- Use **kebab-case** for file and folder names (e.g., `bridge-card.tsx`, `transaction-status/`)
+- Use **PascalCase** for component names (e.g., `BridgeCard`, `TransactionStatus`)
+
+**Architecture Pattern:**
+Follow the [Container/Presentational pattern](https://www.patterns.dev/react/presentational-container-pattern/):
+- **Presentational components**: Focus on UI rendering, receive data via props, minimal logic
+- **Container components**: Handle data fetching, state management, and business logic
+
+This approach makes it easy to create storybook stories for new components.
+
+Example structure:
+```
+components/
+└── feature-name/
+    ├── index.tsx              # Public exports
+    ├── feature-name.view.tsx      # Main presentational component
+    ├── feature-name.hooks.ts   # Hook with container logic (if needed)
+    └── feature-name.stories.tsx  # Storybook stories
+```
+
+**Storybook:**
+- Add Storybook stories for new UI components
+- Run `pnpm storybook` to develop and test components in isolation
+- Stories should cover different states and edge cases
+- You could also automate the process with Claude or AI assisted tooling
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
