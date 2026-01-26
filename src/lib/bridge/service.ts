@@ -626,8 +626,12 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     // Use uncached adapters for retry to avoid concurrent transaction conflicts
-    const fromAdapter = await this.getTransactionAdapterForChain(originalTx.fromChain);
-    const toAdapter = await this.getTransactionAdapterForChain(originalTx.toChain);
+    const fromAdapter = await this.getTransactionAdapterForChain(
+      originalTx.fromChain,
+    );
+    const toAdapter = await this.getTransactionAdapterForChain(
+      originalTx.toChain,
+    );
     const bridgeResult = originalTx.bridgeResult as BridgeResult;
 
     // Ensure destination chain is added BEFORE Bridge Kit execution
@@ -785,8 +789,12 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     // Use uncached adapters for resume to avoid concurrent transaction conflicts
-    const fromAdapter = await this.getTransactionAdapterForChain(transaction.fromChain);
-    const toAdapter = await this.getTransactionAdapterForChain(transaction.toChain);
+    const fromAdapter = await this.getTransactionAdapterForChain(
+      transaction.fromChain,
+    );
+    const toAdapter = await this.getTransactionAdapterForChain(
+      transaction.toChain,
+    );
     const bridgeResult = transaction.bridgeResult as BridgeResult;
 
     // Ensure destination chain is added BEFORE Bridge Kit execution
