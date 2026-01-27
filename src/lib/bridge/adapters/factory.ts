@@ -5,7 +5,6 @@
 
 import { createViemAdapterFromProvider as createEvmAdapter } from "@circle-fin/adapter-viem-v2";
 import { createSolanaAdapterFromProvider as createSolanaAdapter } from "@circle-fin/adapter-solana";
-import type { AdapterContext } from "@circle-fin/bridge-kit";
 import { Connection } from "@solana/web3.js";
 import type { IWallet } from "~/lib/wallet/types";
 import {
@@ -21,8 +20,11 @@ const SOLANA_RPC_ENDPOINTS = {
   testnet: "https://api.devnet.solana.com",
 } as const;
 
-// Use the adapter type from Circle's bridge-kit
-type BridgeAdapter = AdapterContext["adapter"];
+// Use union of actual adapter return types to avoid type mismatch between SDK packages
+// The individual adapter packages have slightly different type definitions than bridge-kit's AdapterContext
+export type EvmAdapter = Awaited<ReturnType<typeof createEvmAdapter>>;
+export type SolanaAdapter = Awaited<ReturnType<typeof createSolanaAdapter>>;
+export type BridgeAdapter = EvmAdapter | SolanaAdapter;
 
 /**
  * Base adapter creator interface
@@ -140,6 +142,56 @@ export class EVMAdapterCreator implements IAdapterCreator {
 export class SolanaAdapterCreator implements IAdapterCreator {
   readonly networkType: NetworkType = "solana";
 
+  /**
+   * Switch Solana wallet to target network before creating adapter
+   * Uses Dynamic's chain ID for network switching (e.g., "101" for mainnet, "103" for devnet)
+   *
+   * This is critical when Solana is the destination chain - the wallet may still be
+   * connected to devnet from previous testing, causing network mismatch errors during mint.
+   *
+   * @param wallet - The Solana wallet to switch networks on
+   * @param chainId - The SupportedChainId (e.g., "Solana" or "Solana_Devnet")
+   */
+  static async switchNetwork(
+    wallet: IWallet,
+    chainId: SupportedChainId,
+  ): Promise<void> {
+    if (wallet.chainType !== "solana") {
+      console.warn(
+        "[SolanaAdapter] Cannot switch network: wallet is not a Solana wallet",
+      );
+      return;
+    }
+
+    if (!wallet.switchNetwork) {
+      console.warn("[SolanaAdapter] Wallet does not support network switching");
+      return;
+    }
+
+    const network = NETWORK_CONFIGS[chainId];
+    if (network?.type !== "solana") {
+      console.warn(`[SolanaAdapter] Invalid Solana chain: ${chainId}`);
+      return;
+    }
+
+    // Dynamic uses string chain IDs for Solana: "101" (mainnet), "103" (devnet)
+    const dynamicChainId = network.dynamicChainId;
+    if (!dynamicChainId) {
+      console.warn(`[SolanaAdapter] No dynamicChainId for ${chainId}`);
+      return;
+    }
+
+    try {
+      await wallet.switchNetwork(dynamicChainId);
+      // Wait for wallet to update its connection
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error(`[SolanaAdapter] Failed to switch network:`, error);
+      // Re-throw - we need the switch to succeed for correct RPC on mainnet
+      throw error;
+    }
+  }
+
   canHandle(wallet: IWallet): boolean {
     return wallet.chainType === "solana";
   }
@@ -158,21 +210,20 @@ export class SolanaAdapterCreator implements IAdapterCreator {
 
     const solanaProvider = await wallet.getSolanaProvider();
 
+    // Determine environment from chainId
+    const network = chainId ? NETWORK_CONFIGS[chainId] : null;
+    const isTestnet = network?.environment === "testnet";
+
     let connection: Connection;
 
-    if (wallet.getSolanaConnection) {
-      // Use wallet's connection (preferred - respects user's RPC configuration)
+    if (isTestnet) {
+      // Testnet: Always use default devnet RPC
+      connection = new Connection(SOLANA_RPC_ENDPOINTS.testnet);
+    } else if (wallet.getSolanaConnection) {
+      // Mainnet with wallet connection: Use wallet's RPC (respects user's configuration)
       connection = await wallet.getSolanaConnection();
-    } else if (chainId) {
-      // Fall back to default RPC based on chain environment
-      const network = NETWORK_CONFIGS[chainId];
-      const rpcEndpoint =
-        network?.environment === "mainnet"
-          ? SOLANA_RPC_ENDPOINTS.mainnet
-          : SOLANA_RPC_ENDPOINTS.testnet;
-      connection = new Connection(rpcEndpoint);
     } else {
-      // Default to mainnet if we can't determine (likely won't happen in practice)
+      // Default to mainnet RPC (TODO: this RPC is very unreliable, must remove)
       connection = new Connection(SOLANA_RPC_ENDPOINTS.mainnet);
     }
 

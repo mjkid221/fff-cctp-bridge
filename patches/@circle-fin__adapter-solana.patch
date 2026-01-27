@@ -1,8 +1,8 @@
 diff --git a/index.cjs b/index.cjs
-index 0a43fdb4e874212bd99d8bced49774f0607a1c23..752b86de72bf6bffcc3e4b49939de9c1757486e4 100644
+index fec398d895777f19b08fe48872ea014c0c3c4429..c0ae048ba8db91ba4536e2c7fa77291841f57790 100644
 --- a/index.cjs
 +++ b/index.cjs
-@@ -1130,6 +1130,8 @@ exports.Blockchain = void 0;
+@@ -1201,6 +1201,8 @@ exports.Blockchain = void 0;
      Blockchain["Ink_Testnet"] = "Ink_Testnet";
      Blockchain["Linea"] = "Linea";
      Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
@@ -11,7 +11,23 @@ index 0a43fdb4e874212bd99d8bced49774f0607a1c23..752b86de72bf6bffcc3e4b49939de9c1
      Blockchain["NEAR"] = "NEAR";
      Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
      Blockchain["Noble"] = "Noble";
-@@ -2223,6 +2225,82 @@ const LineaSepolia = defineChain({
+@@ -1292,6 +1294,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -1311,6 +1314,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -2297,6 +2301,82 @@ const LineaSepolia = defineChain({
      },
  });
  
@@ -94,7 +110,7 @@ index 0a43fdb4e874212bd99d8bced49774f0607a1c23..752b86de72bf6bffcc3e4b49939de9c1
  /**
   * NEAR Protocol Mainnet chain definition
   * @remarks
-@@ -3307,6 +3385,8 @@ var Blockchains = {
+@@ -3381,6 +3461,8 @@ var Blockchains = {
      InkTestnet: InkTestnet,
      Linea: Linea,
      LineaSepolia: LineaSepolia,
@@ -104,7 +120,7 @@ index 0a43fdb4e874212bd99d8bced49774f0607a1c23..752b86de72bf6bffcc3e4b49939de9c1
      NEARTestnet: NEARTestnet,
      Noble: Noble,
 diff --git a/index.d.ts b/index.d.ts
-index cadc9f5e4530d00b7e93eac17719c2fdc7b2e5e3..df504c3fbb30f4ab08b6ccfac946fff3ee10344f 100644
+index 061b18878d407fb9ee184a0ba8f4a59b6cc340e2..db73fb5b058ca64792c820652a482f1cc84681c8 100644
 --- a/index.d.ts
 +++ b/index.d.ts
 @@ -436,6 +436,8 @@ declare enum Blockchain {
@@ -117,10 +133,10 @@ index cadc9f5e4530d00b7e93eac17719c2fdc7b2e5e3..df504c3fbb30f4ab08b6ccfac946fff3
      NEAR_Testnet = "NEAR_Testnet",
      Noble = "Noble",
 diff --git a/index.mjs b/index.mjs
-index 76abbbace744ad08437cd27ed570ea843202c5dd..bdb310e3600333d2e857eec6953d63cc6d161b17 100644
+index 66d85c2b5bd6dc433c2c473ab33a0b9d6400070f..0ebad5f889c8fcab613ff9dd9a30d15f2f5da6d0 100644
 --- a/index.mjs
 +++ b/index.mjs
-@@ -1124,6 +1124,8 @@ var Blockchain;
+@@ -1195,6 +1195,8 @@ var Blockchain;
      Blockchain["Ink_Testnet"] = "Ink_Testnet";
      Blockchain["Linea"] = "Linea";
      Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
@@ -129,7 +145,23 @@ index 76abbbace744ad08437cd27ed570ea843202c5dd..bdb310e3600333d2e857eec6953d63cc
      Blockchain["NEAR"] = "NEAR";
      Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
      Blockchain["Noble"] = "Noble";
-@@ -2217,6 +2219,82 @@ const LineaSepolia = defineChain({
+@@ -1286,6 +1288,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -1305,6 +1308,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -2291,6 +2295,82 @@ const LineaSepolia = defineChain({
      },
  });
  
@@ -212,7 +244,7 @@ index 76abbbace744ad08437cd27ed570ea843202c5dd..bdb310e3600333d2e857eec6953d63cc
  /**
   * NEAR Protocol Mainnet chain definition
   * @remarks
-@@ -3301,6 +3379,8 @@ var Blockchains = /*#__PURE__*/Object.freeze({
+@@ -3375,6 +3455,8 @@ var Blockchains = /*#__PURE__*/Object.freeze({
      InkTestnet: InkTestnet,
      Linea: Linea,
      LineaSepolia: LineaSepolia,

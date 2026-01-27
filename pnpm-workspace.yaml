@@ -1,3 +1,5 @@
+minimumReleaseAge: 2880
+
 overrides:
   '@metamask/sdk-communication-layer@>=0.16.0 <=0.33.0': '>=0.33.1'
   '@metamask/sdk@>=0.16.0 <=0.33.0': '>=0.33.1'
@@ -14,8 +16,6 @@ overrides:
   diff@>=6.0.0 <8.0.3: '>=8.0.3'
 
 patchedDependencies:
-  '@circle-fin/bridge-kit': patches/@circle-fin__bridge-kit.patch
-  '@circle-fin/adapter-viem-v2': patches/@circle-fin__adapter-viem-v2.patch
   '@circle-fin/adapter-solana': patches/@circle-fin__adapter-solana.patch
-
-minimumReleaseAge: 2880 # in minutes (2 days)
+  '@circle-fin/adapter-viem-v2': patches/@circle-fin__adapter-viem-v2.patch
+  '@circle-fin/bridge-kit@1.3.0': patches/@circle-fin__bridge-kit@1.3.0.patch

@@ -2,8 +2,8 @@ import {
   BridgeKit,
   resolveChainIdentifier,
   type BridgeResult,
+  type AdapterContext,
 } from "@circle-fin/bridge-kit";
-import type { AdapterContext } from "@circle-fin/bridge-kit";
 import { nanoid } from "nanoid";
 import {
   createWalletClient,
@@ -28,7 +28,10 @@ import type { SupportedChainId } from "./networks";
 import {
   getAdapterFactory,
   type AdapterFactory,
+  type BridgeAdapter,
+  type SolanaAdapter,
   EVMAdapterCreator,
+  SolanaAdapterCreator,
 } from "./adapters/factory";
 import { getBalanceService, type BalanceService } from "./balance/service";
 import { getAttestationTime } from "./attestation-times";
@@ -138,8 +141,8 @@ interface BridgeOperationContext {
   token: string;
   recipientAddress?: string;
   transferSpeed: "FAST" | "SLOW";
-  fromAdapter: AdapterContext["adapter"];
-  toAdapter: AdapterContext["adapter"];
+  fromAdapter: BridgeAdapter;
+  toAdapter: BridgeAdapter;
   /** Actual wallet address on source chain */
   sourceAddress: string;
   /** Actual wallet address on destination chain */
@@ -215,7 +218,7 @@ export class CCTPBridgeService implements IBridgeService {
    */
   private async getAdapterForChain(
     chain: SupportedChainId,
-  ): Promise<AdapterContext["adapter"]> {
+  ): Promise<BridgeAdapter> {
     const network = NETWORK_CONFIGS[chain];
     if (!network) {
       throw new Error(`Invalid chain: ${chain}`);
@@ -258,7 +261,7 @@ export class CCTPBridgeService implements IBridgeService {
   private async getAdapterForChainWithWallet(
     chain: SupportedChainId,
     wallet?: IWallet,
-  ): Promise<AdapterContext["adapter"]> {
+  ): Promise<BridgeAdapter> {
     const network = NETWORK_CONFIGS[chain];
     if (!network) {
       throw new Error(`Invalid chain: ${chain}`);
@@ -301,7 +304,7 @@ export class CCTPBridgeService implements IBridgeService {
    */
   private async getTransactionAdapterForChain(
     chain: SupportedChainId,
-  ): Promise<AdapterContext["adapter"]> {
+  ): Promise<BridgeAdapter> {
     const network = NETWORK_CONFIGS[chain];
     if (!network) {
       throw new Error(`Invalid chain: ${chain}`);
@@ -341,7 +344,7 @@ export class CCTPBridgeService implements IBridgeService {
   private async getTransactionAdapterForChainWithWallet(
     chain: SupportedChainId,
     wallet?: IWallet,
-  ): Promise<AdapterContext["adapter"]> {
+  ): Promise<BridgeAdapter> {
     const network = NETWORK_CONFIGS[chain];
     if (!network) {
       throw new Error(`Invalid chain: ${chain}`);
@@ -460,10 +463,15 @@ export class CCTPBridgeService implements IBridgeService {
 
     try {
       const transferSpeed = getTransferSpeed(params.transferMethod);
+      // Disgusting work around for type mismatch between SDK packages
+      type KitAdapter = AdapterContext["adapter"];
       const estimate = await this.kit.estimate({
-        from: { adapter: fromAdapter, chain: params.fromChain },
+        from: {
+          adapter: fromAdapter as unknown as KitAdapter,
+          chain: params.fromChain,
+        },
         to: {
-          adapter: toAdapter,
+          adapter: toAdapter as unknown as KitAdapter,
           chain: params.toChain,
           ...(params.recipientAddress && {
             recipientAddress: params.recipientAddress,
@@ -659,8 +667,16 @@ export class CCTPBridgeService implements IBridgeService {
             originalTx.fromChain,
           );
         }
+      } else if (fromNetwork.type === "solana") {
+        // Switch Solana wallet to source network
+        const solanaWallet = this.wallets.find((w) => w.chainType === "solana");
+        if (solanaWallet) {
+          await SolanaAdapterCreator.switchNetwork(
+            solanaWallet,
+            originalTx.fromChain,
+          );
+        }
       }
-      // Solana doesn't require explicit network switching
     }
     // No else needed - Bridge Kit will handle switching to destination for mint
 
@@ -718,9 +734,11 @@ export class CCTPBridgeService implements IBridgeService {
       }
       await this.storage.saveTransaction(transaction);
 
+      // Cast adapters at BridgeKit API boundary due to internal type mismatch between SDK packages
+      type KitAdapter = AdapterContext["adapter"];
       const retryResult = await retryKit.retry(bridgeResult, {
-        from: fromAdapter,
-        to: toAdapter,
+        from: fromAdapter as unknown as KitAdapter,
+        to: toAdapter as unknown as KitAdapter,
       });
 
       transaction.bridgeResult = retryResult;
@@ -822,8 +840,16 @@ export class CCTPBridgeService implements IBridgeService {
             transaction.fromChain,
           );
         }
+      } else if (fromNetwork.type === "solana") {
+        // Switch Solana wallet to source network
+        const solanaWallet = this.wallets.find((w) => w.chainType === "solana");
+        if (solanaWallet) {
+          await SolanaAdapterCreator.switchNetwork(
+            solanaWallet,
+            transaction.fromChain,
+          );
+        }
       }
-      // Solana doesn't require explicit network switching
     }
     // No else needed - Bridge Kit will handle switching to destination for mint
 
@@ -839,9 +865,11 @@ export class CCTPBridgeService implements IBridgeService {
     try {
       // Use kit.retry() to continue from where we left off
       // Bridge Kit's retry handles resumption internally based on bridgeResult state
+      // Cast adapters at BridgeKit API boundary due to internal type mismatch between SDK packages
+      type KitAdapter = AdapterContext["adapter"];
       const retryResult = await resumeKit.retry(bridgeResult, {
-        from: fromAdapter,
-        to: toAdapter,
+        from: fromAdapter as unknown as KitAdapter,
+        to: toAdapter as unknown as KitAdapter,
       });
 
       transaction.bridgeResult = retryResult;
@@ -1190,8 +1218,10 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Invalid chain configuration for Solana mint");
     }
 
-    // Get the Solana adapter
-    const solanaAdapter = await this.getAdapterForChain(transaction.toChain);
+    // Get the Solana adapter (cast to specific type for prepareAction/execute calls)
+    const solanaAdapter = (await this.getAdapterForChain(
+      transaction.toChain,
+    )) as SolanaAdapter;
 
     console.log("[Recovery] Executing Solana receiveMessage", {
       fromChain: transaction.fromChain,
@@ -1385,7 +1415,11 @@ export class CCTPBridgeService implements IBridgeService {
           }
           break;
         case "solana":
-          // Solana doesn't require explicit network switching
+          // Switch Solana wallet to source network
+          await SolanaAdapterCreator.switchNetwork(
+            params.sourceWallet,
+            params.fromChain,
+          );
           break;
         case "sui":
           // TODO: Add SUI network switching when SUI adapter is available
@@ -1407,7 +1441,11 @@ export class CCTPBridgeService implements IBridgeService {
           }
           break;
         case "solana":
-          // Solana doesn't require explicit network switching
+          // Switch Solana wallet to destination network (critical for mainnet mint)
+          await SolanaAdapterCreator.switchNetwork(
+            params.destWallet,
+            params.toChain,
+          );
           break;
         case "sui":
           // TODO: Add SUI network switching when SUI adapter is available
@@ -1533,10 +1571,15 @@ export class CCTPBridgeService implements IBridgeService {
     this.syncTransactionState(transaction);
 
     // Use the transaction-specific kit (events are routed to this transaction only)
+    // Cast adapters at BridgeKit API boundary due to internal type mismatch between SDK packages
+    type KitAdapter = AdapterContext["adapter"];
     const result: BridgeResult = await kit.bridge({
-      from: { adapter: context.fromAdapter, chain: context.fromChain },
+      from: {
+        adapter: context.fromAdapter as unknown as KitAdapter,
+        chain: context.fromChain,
+      },
       to: {
-        adapter: context.toAdapter,
+        adapter: context.toAdapter as unknown as KitAdapter,
         chain: context.toChain,
         ...(context.recipientAddress && {
           recipientAddress: context.recipientAddress,

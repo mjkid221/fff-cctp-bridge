@@ -1,8 +1,8 @@
 diff --git a/index.cjs b/index.cjs
-index e68f69a1461a6e55dce9ae3bed0620d1d3734564..777e54176f4bbddd6cd748981c0f0a8f3bd7e96b 100644
+index 5f31b3214a2ba57dc76677465fc2a51ae3b20971..c310b4d5117f8ba2e3d63f15e9e63160db803122 100644
 --- a/index.cjs
 +++ b/index.cjs
-@@ -1099,6 +1099,8 @@ exports.Blockchain = void 0;
+@@ -1170,6 +1170,8 @@ exports.Blockchain = void 0;
      Blockchain["Ink_Testnet"] = "Ink_Testnet";
      Blockchain["Linea"] = "Linea";
      Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
@@ -11,7 +11,23 @@ index e68f69a1461a6e55dce9ae3bed0620d1d3734564..777e54176f4bbddd6cd748981c0f0a8f
      Blockchain["NEAR"] = "NEAR";
      Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
      Blockchain["Noble"] = "Noble";
-@@ -2192,6 +2194,82 @@ const LineaSepolia = defineChain({
+@@ -1261,6 +1263,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -1280,6 +1283,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -2266,6 +2270,82 @@ const LineaSepolia = defineChain({
      },
  });
  
@@ -94,7 +110,7 @@ index e68f69a1461a6e55dce9ae3bed0620d1d3734564..777e54176f4bbddd6cd748981c0f0a8f
  /**
   * NEAR Protocol Mainnet chain definition
   * @remarks
-@@ -3276,6 +3354,8 @@ var Blockchains = {
+@@ -3350,6 +3430,8 @@ var Blockchains = {
      InkTestnet: InkTestnet,
      Linea: Linea,
      LineaSepolia: LineaSepolia,
@@ -103,7 +119,7 @@ index e68f69a1461a6e55dce9ae3bed0620d1d3734564..777e54176f4bbddd6cd748981c0f0a8f
      NEAR: NEAR,
      NEARTestnet: NEARTestnet,
      Noble: Noble,
-@@ -10265,6 +10345,8 @@ const getViemChainByEnum = (chain) => {
+@@ -10401,6 +10483,8 @@ const getViemChainByEnum = (chain) => {
          case exports.Blockchain.HyperEVM_Testnet:
          case exports.Blockchain.Ink:
          case exports.Blockchain.Ink_Testnet:
@@ -113,7 +129,7 @@ index e68f69a1461a6e55dce9ae3bed0620d1d3734564..777e54176f4bbddd6cd748981c0f0a8f
          case exports.Blockchain.Plume_Testnet:
          case exports.Blockchain.Sonic_Testnet:
 diff --git a/index.d.ts b/index.d.ts
-index caf7b968988b4f0c223e2180e8fb60645a5dc998..14e390c40629ae2ab5f3348608f01626706c1ffa 100644
+index 2bf098c16ba9af7f0b44d4e1ac4a3d4648b2d124..91108b49dce6f048183d4d08c8fe81249b0172e6 100644
 --- a/index.d.ts
 +++ b/index.d.ts
 @@ -437,6 +437,8 @@ declare enum Blockchain {
@@ -126,10 +142,10 @@ index caf7b968988b4f0c223e2180e8fb60645a5dc998..14e390c40629ae2ab5f3348608f01626
      NEAR_Testnet = "NEAR_Testnet",
      Noble = "Noble",
 diff --git a/index.mjs b/index.mjs
-index 17e01c478d3e48fcbd517848fe6bd0ebf0c68592..1606055419394b123a38c85ce12c02dca59e2c6e 100644
+index a460cb88e2c4bb793c6df6384308466443c439ea..e06a1d25ecf4ab681837250ed73fa37fcd4b8007 100644
 --- a/index.mjs
 +++ b/index.mjs
-@@ -1093,6 +1093,8 @@ var Blockchain;
+@@ -1164,6 +1164,8 @@ var Blockchain;
      Blockchain["Ink_Testnet"] = "Ink_Testnet";
      Blockchain["Linea"] = "Linea";
      Blockchain["Linea_Sepolia"] = "Linea_Sepolia";
@@ -138,7 +154,23 @@ index 17e01c478d3e48fcbd517848fe6bd0ebf0c68592..1606055419394b123a38c85ce12c02dc
      Blockchain["NEAR"] = "NEAR";
      Blockchain["NEAR_Testnet"] = "NEAR_Testnet";
      Blockchain["Noble"] = "Noble";
-@@ -2186,6 +2188,82 @@ const LineaSepolia = defineChain({
+@@ -1255,6 +1257,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM"] = "HyperEVM";
+     BridgeChain["Ink"] = "Ink";
+     BridgeChain["Linea"] = "Linea";
++    BridgeChain["Monad"] = "Monad";
+     BridgeChain["Optimism"] = "Optimism";
+     BridgeChain["Plume"] = "Plume";
+     BridgeChain["Polygon"] = "Polygon";
+@@ -1274,6 +1277,7 @@ var BridgeChain;
+     BridgeChain["HyperEVM_Testnet"] = "HyperEVM_Testnet";
+     BridgeChain["Ink_Testnet"] = "Ink_Testnet";
+     BridgeChain["Linea_Sepolia"] = "Linea_Sepolia";
++    BridgeChain["Monad_Testnet"] = "Monad_Testnet";
+     BridgeChain["Optimism_Sepolia"] = "Optimism_Sepolia";
+     BridgeChain["Plume_Testnet"] = "Plume_Testnet";
+     BridgeChain["Polygon_Amoy_Testnet"] = "Polygon_Amoy_Testnet";
+@@ -2260,6 +2264,82 @@ const LineaSepolia = defineChain({
      },
  });
  
@@ -221,7 +253,7 @@ index 17e01c478d3e48fcbd517848fe6bd0ebf0c68592..1606055419394b123a38c85ce12c02dc
  /**
   * NEAR Protocol Mainnet chain definition
   * @remarks
-@@ -3270,6 +3348,8 @@ var Blockchains = /*#__PURE__*/Object.freeze({
+@@ -3344,6 +3424,8 @@ var Blockchains = /*#__PURE__*/Object.freeze({
      InkTestnet: InkTestnet,
      Linea: Linea,
      LineaSepolia: LineaSepolia,
@@ -230,7 +262,7 @@ index 17e01c478d3e48fcbd517848fe6bd0ebf0c68592..1606055419394b123a38c85ce12c02dc
      NEAR: NEAR,
      NEARTestnet: NEARTestnet,
      Noble: Noble,
-@@ -10259,6 +10339,8 @@ const getViemChainByEnum = (chain) => {
+@@ -10395,6 +10477,8 @@ const getViemChainByEnum = (chain) => {
          case Blockchain.HyperEVM_Testnet:
          case Blockchain.Ink:
          case Blockchain.Ink_Testnet:

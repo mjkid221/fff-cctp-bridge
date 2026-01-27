@@ -3,10 +3,10 @@
  * Uses direct contract reads via adapters
  */
 
-import type { AdapterContext } from "@circle-fin/bridge-kit";
 import type { SupportedChainId } from "../networks";
 import type { TokenBalance } from "../types";
 import { NETWORK_CONFIGS } from "../networks";
+import type { BridgeAdapter } from "../adapters/factory";
 
 /**
  * Balance Service for fetching token balances across all networks
@@ -16,7 +16,7 @@ export class BalanceService {
    * Get USDC balance for a specific chain
    */
   async getUSDCBalance(
-    adapter: AdapterContext["adapter"],
+    adapter: BridgeAdapter,
     chain: SupportedChainId,
     walletAddress: string,
   ): Promise<TokenBalance> {
@@ -52,7 +52,7 @@ export class BalanceService {
    * Get EVM token balance using Circle's adapter prepare/execute pattern
    */
   private async getEVMBalance(
-    adapter: AdapterContext["adapter"],
+    adapter: BridgeAdapter,
     chain: SupportedChainId,
     walletAddress: string,
   ): Promise<TokenBalance> {
@@ -91,7 +91,7 @@ export class BalanceService {
    * Uses SPL token associated token account balance
    */
   private async getSolanaBalance(
-    adapter: AdapterContext["adapter"],
+    adapter: BridgeAdapter,
     chain: SupportedChainId,
     walletAddress: string,
   ): Promise<TokenBalance> {
@@ -159,7 +159,7 @@ export class BalanceService {
    * Batch fetch balances for multiple chains
    */
   async getBalances(
-    getAdapter: (chain: SupportedChainId) => Promise<AdapterContext["adapter"]>,
+    getAdapter: (chain: SupportedChainId) => Promise<BridgeAdapter>,
     chains: SupportedChainId[],
     walletAddress: string,
   ): Promise<Record<SupportedChainId, TokenBalance>> {

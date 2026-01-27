@@ -21,31 +21,31 @@ overrides:
 
 patchedDependencies:
   '@circle-fin/adapter-solana':
-    hash: 80b77a50d768e810d69ee6bab48f652a59da1342aebd3870d2ffad8702383d28
+    hash: 2a4770e99e028738bc3541757b9b790f84885cba08c6785ccf8ed233aa942950
     path: patches/@circle-fin__adapter-solana.patch
   '@circle-fin/adapter-viem-v2':
-    hash: 968e46cd2c3ba1bf4d402f2850ef647196d4de64d7c0a477a63240cc44155797
+    hash: 47724f8534176167ebab4f90aa0b6dd69f3f2fbe18e5bb9cbd3fd53fade4f5bc
     path: patches/@circle-fin__adapter-viem-v2.patch
-  '@circle-fin/bridge-kit':
-    hash: a4f834ae68721459f2015d0904fd764fa2e7ecb427b69be2d34d742f1b6775df
-    path: patches/@circle-fin__bridge-kit.patch
+  '@circle-fin/bridge-kit@1.3.0':
+    hash: fd275353a5cca78d41dbcf328450b47024a732ec2551c6c8403b62cd6160a231
+    path: patches/@circle-fin__bridge-kit@1.3.0.patch
 
 importers:
 
   .:
     dependencies:
       '@circle-fin/adapter-solana':
-        specifier: ^1.2.1
-        version: 1.2.1(patch_hash=80b77a50d768e810d69ee6bab48f652a59da1342aebd3870d2ffad8702383d28)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^1.3.0
+        version: 1.3.0(patch_hash=2a4770e99e028738bc3541757b9b790f84885cba08c6785ccf8ed233aa942950)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@circle-fin/adapter-viem-v2':
-        specifier: ^1.2.0
-        version: 1.2.0(patch_hash=968e46cd2c3ba1bf4d402f2850ef647196d4de64d7c0a477a63240cc44155797)(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
+        specifier: ^1.3.0
+        version: 1.3.0(patch_hash=47724f8534176167ebab4f90aa0b6dd69f3f2fbe18e5bb9cbd3fd53fade4f5bc)(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))
       '@circle-fin/bridge-kit':
         specifier: ^1.3.0
-        version: 1.3.0(patch_hash=a4f834ae68721459f2015d0904fd764fa2e7ecb427b69be2d34d742f1b6775df)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        version: 1.3.0(patch_hash=fd275353a5cca78d41dbcf328450b47024a732ec2551c6c8403b62cd6160a231)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@circle-fin/provider-cctp-v2':
-        specifier: 1.1.0
-        version: 1.1.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
+        specifier: ^1.2.0
+        version: 1.2.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@dynamic-labs/ethereum':
         specifier: ^4.47.0
         version: 4.47.3(@types/react@19.2.7)(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))(zod@3.25.76)
@@ -514,14 +514,14 @@ packages:
     peerDependencies:
       storybook: ^0.0.0-0 || ^10.1.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0
 
-  '@circle-fin/adapter-solana@1.2.1':
-    resolution: {integrity: sha512-rVbAMEeEFiheQbmh6rn2FpIyQq7EeHWQ9jXDjYJr3tbGTm6gRsfaJm458gvytrlRHe6K5Pl3jqeqyJX050rypw==}
+  '@circle-fin/adapter-solana@1.3.0':
+    resolution: {integrity: sha512-OvOg62hDkNdiYgqkjS9M7keEUUfGQHZXnUdcyJEYO1li08o1X/D5cT9jzwA9L9gLL+on3UBKulRWEdjci+bnRg==}
     peerDependencies:
       '@solana/spl-token': ^0.4.13
       '@solana/web3.js': ^1.98.2
 
-  '@circle-fin/adapter-viem-v2@1.2.0':
-    resolution: {integrity: sha512-NmbtPS5PbploLx5ujWltGEVNjMjqIn0q/7/i4mQEQEt5j6K1Sa6kuuFCraLu/R4QEClSHSIpCSgAdXEX4LT25g==}
+  '@circle-fin/adapter-viem-v2@1.3.0':
+    resolution: {integrity: sha512-ACOLtEnCWpD4J3NUh6EplAXx81Ilv75D0wkgO11HZzB6pbbmI7BZMEVViOIzxzyxKjTj5mykYhk8umCo68e+cA==}
     peerDependencies:
       viem: ^2.30.0
 
@@ -529,8 +529,8 @@ packages:
     resolution: {integrity: sha512-TV52JCirYomALB43UYc6/8X7OZFNly6HY0rfkgb80LWYFLiCuXQUxeaNvLTjk/AS9cSrvrqs2l+98wWoc1n1Dg==}
     engines: {node: '>=16.0.0'}
 
-  '@circle-fin/provider-cctp-v2@1.1.0':
-    resolution: {integrity: sha512-B8uMVJpJiaqnwx4cSPI9FHjYuMvnzFkeo1uH23QqqLbxHh5viqg1m9qcI3OWPzT9R2A4nKfVKoAG0mg3QJDZow==}
+  '@circle-fin/provider-cctp-v2@1.2.0':
+    resolution: {integrity: sha512-OS96iQNsBiCTiTa2pPlmrYsKhi/xEVCR9jflvGvfaaXSeTqCqVp+W2MuVweiB0yn1/kE342TeBDxrzigIdSwIw==}
     peerDependencies:
       '@solana/spl-token': ^0.4.13
       '@solana/web3.js': ^1.98.2
@@ -8086,7 +8086,7 @@ snapshots:
       - '@chromatic-com/cypress'
       - '@chromatic-com/playwright'
 
-  '@circle-fin/adapter-solana@1.2.1(patch_hash=80b77a50d768e810d69ee6bab48f652a59da1342aebd3870d2ffad8702383d28)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@circle-fin/adapter-solana@1.3.0(patch_hash=2a4770e99e028738bc3541757b9b790f84885cba08c6785ccf8ed233aa942950)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@coral-xyz/anchor': 0.31.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@ethersproject/address': 5.8.0
@@ -8104,7 +8104,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@circle-fin/adapter-viem-v2@1.2.0(patch_hash=968e46cd2c3ba1bf4d402f2850ef647196d4de64d7c0a477a63240cc44155797)(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))':
+  '@circle-fin/adapter-viem-v2@1.3.0(patch_hash=47724f8534176167ebab4f90aa0b6dd69f3f2fbe18e5bb9cbd3fd53fade4f5bc)(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.40.3(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))':
     dependencies:
       '@ethersproject/address': 5.8.0
       '@ethersproject/bytes': 5.8.0
@@ -8120,9 +8120,9 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@circle-fin/bridge-kit@1.3.0(patch_hash=a4f834ae68721459f2015d0904fd764fa2e7ecb427b69be2d34d742f1b6775df)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@circle-fin/bridge-kit@1.3.0(patch_hash=fd275353a5cca78d41dbcf328450b47024a732ec2551c6c8403b62cd6160a231)(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@circle-fin/provider-cctp-v2': 1.1.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@circle-fin/provider-cctp-v2': 1.2.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@ethersproject/address': 5.8.0
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/units': 5.8.0
@@ -8137,7 +8137,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@circle-fin/provider-cctp-v2@1.1.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@circle-fin/provider-cctp-v2@1.2.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@coral-xyz/anchor': 0.31.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@ethersproject/address': 5.8.0
@@ -8156,7 +8156,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@circle-fin/provider-cctp-v2@1.1.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@circle-fin/provider-cctp-v2@1.2.0(@solana/spl-token@0.4.14(@solana/web3.js@1.98.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/web3.js@1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@coral-xyz/anchor': 0.31.1(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@ethersproject/address': 5.8.0
