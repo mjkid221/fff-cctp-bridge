@@ -88,11 +88,12 @@ export function parseTransactionError(error: unknown): ParsedError {
       userMessage = programMatch[1].trim();
     }
   }
-  // Pattern 6: Solana transaction errors
-  else if (errorString.includes("Transaction simulation failed:")) {
-    const solSimMatch = /Transaction simulation failed:\s*(.+?)(?:\n|$)/i.exec(
-      errorString,
-    );
+  // Pattern 6: Solana transaction errors (colon or period + "Error:" format)
+  else if (/transaction simulation failed/i.test(errorString)) {
+    const solSimMatch =
+      /Transaction simulation failed[.:]\s*(?:Error:\s*)?(.+?)(?:\s+Wallet:|$)/i.exec(
+        errorString,
+      );
     if (solSimMatch?.[1]) {
       userMessage = solSimMatch[1].trim();
     }
@@ -119,6 +120,28 @@ export function parseTransactionError(error: unknown): ParsedError {
   // Provide user-friendly message for rejections
   if (isUserRejection) {
     userMessage = "You cancelled the transaction in your wallet";
+  }
+
+  // Solana-specific structured error patterns
+  // Pattern: {"InstructionError":[0,{"Custom":1}]} - Token program errors (e.g., insufficient USDC)
+  if (/InstructionError.*Custom/.test(userMessage)) {
+    const customMatch = /"Custom"\s*:\s*(\d+)/.exec(userMessage);
+    const code = customMatch?.[1];
+    userMessage = getSolanaCustomErrorMessage(code);
+  }
+  // Pattern: {"InsufficientFundsForRent":{"account_index":0}} - Not enough SOL for rent
+  else if (userMessage.includes("InsufficientFundsForRent")) {
+    userMessage =
+      "Not enough SOL in your wallet to cover account rent. Please add more SOL and try again";
+  }
+  // Pattern: Blockhash expired / not found - User idled too long before confirming
+  else if (
+    /blockhash not found|blockhash.*expired|block height exceeded/i.test(
+      userMessage,
+    )
+  ) {
+    userMessage =
+      "Transaction expired because it took too long to confirm. Please try again and approve promptly in your wallet";
   }
 
   // Provide user-friendly messages for common errors
@@ -185,6 +208,57 @@ export function parseStepError(stepName: string, error: unknown): string {
   }
 
   return `${capitalizeFirst(stepName)} failed: ${parsed.userMessage}`;
+}
+
+/**
+ * Map Solana SPL Token Program custom error codes to user-friendly messages.
+ * @see https://github.com/solana-labs/solana-program-library/blob/ea354ab358021aa08f774e2d4028b33ec56d4180/token/program/src/error.rs#L16
+ */
+function getSolanaCustomErrorMessage(code: string | undefined): string {
+  switch (code) {
+    case "0":
+      return "Account balance is below the rent-exempt threshold. Please add more SOL";
+    case "1":
+      return "Insufficient SOL balance to cover transaction fees. Please add more SOL";
+    case "2":
+      return "Invalid token mint address";
+    case "3":
+      return "Account not associated with the expected token mint";
+    case "4":
+      return "Token account owner does not match";
+    case "5":
+      return "This token has a fixed supply and cannot mint new tokens";
+    case "6":
+      return "Token account is already in use";
+    case "7":
+      return "Invalid number of signers provided";
+    case "8":
+      return "Invalid number of required signers";
+    case "9":
+      return "Token account is not initialized";
+    case "10":
+      return "This operation does not support native SOL tokens";
+    case "11":
+      return "Token account balance must be zero before closing";
+    case "12":
+      return "Invalid instruction sent to the token program";
+    case "13":
+      return "Token account state is invalid for this operation";
+    case "14":
+      return "Operation overflowed — amount too large";
+    case "15":
+      return "Account does not support the specified authority type";
+    case "16":
+      return "This token mint cannot freeze accounts";
+    case "17":
+      return "Token account is frozen. Contact the token issuer";
+    case "18":
+      return "Token mint decimals mismatch";
+    case "19":
+      return "This operation does not support non-native tokens";
+    default:
+      return `Transaction failed due to a Solana program error (code: ${code ?? "unknown"}). Please try again`;
+  }
 }
 
 /**
