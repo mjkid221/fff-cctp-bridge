@@ -30,10 +30,10 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@circle-fin/adapter-solana": "^1.3.0",
-    "@circle-fin/adapter-viem-v2": "^1.3.0",
-    "@circle-fin/bridge-kit": "^1.3.0",
-    "@circle-fin/provider-cctp-v2": "^1.2.0",
+    "@circle-fin/adapter-solana": "^1.3.1",
+    "@circle-fin/adapter-viem-v2": "^1.4.0",
+    "@circle-fin/bridge-kit": "^1.5.0",
+    "@circle-fin/provider-cctp-v2": "^1.3.0",
     "@dynamic-labs/ethereum": "^4.47.0",
     "@dynamic-labs/iconic": "^4.47.3",
     "@dynamic-labs/sdk-react-core": "^4.47.0",
