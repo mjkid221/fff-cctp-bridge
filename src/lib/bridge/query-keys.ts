@@ -1,3 +1,4 @@
+import type { NetworkEnvironment } from "./networks";
 import type { SupportedChainId } from "./networks";
 import type { TransferMethod } from "./types";
 
@@ -41,6 +42,13 @@ export const bridgeKeys = {
     [...bridgeKeys.all, "transactionHistory"] as const,
   transactionHistory: (userAddress: string | null) =>
     [...bridgeKeys.transactionHistories(), userAddress] as const,
+
+  // Stats queries
+  stats: () => ["userStats"] as const,
+  userStats: (
+    userAddress: string | null,
+    environment: NetworkEnvironment | null,
+  ) => [...bridgeKeys.stats(), userAddress, environment] as const,
 } as const;
 
 // Type helpers for query keys
@@ -50,8 +58,10 @@ export type RouteQueryKey = ReturnType<typeof bridgeKeys.route>;
 export type TransactionHistoryQueryKey = ReturnType<
   typeof bridgeKeys.transactionHistory
 >;
+export type StatsQueryKey = ReturnType<typeof bridgeKeys.userStats>;
 export type BridgeQueryKey =
   | BalanceQueryKey
   | EstimateQueryKey
   | RouteQueryKey
-  | TransactionHistoryQueryKey;
+  | TransactionHistoryQueryKey
+  | StatsQueryKey;

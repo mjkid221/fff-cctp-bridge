@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUserAddress, useEnvironment } from "~/lib/bridge/store";
 import { StatsStorage } from "~/lib/bridge/stats-storage";
+import { bridgeKeys } from "~/lib/bridge/query-keys";
 import type { StatsWindowProps, BridgeStats } from "./stats-window.types";
 
 export function useStatsWindowState({ onClose }: StatsWindowProps) {
@@ -12,7 +13,7 @@ export function useStatsWindowState({ onClose }: StatsWindowProps) {
   const environment = useEnvironment();
 
   const { data: rawStats, isLoading } = useQuery({
-    queryKey: ["userStats", userAddress, environment],
+    queryKey: bridgeKeys.userStats(userAddress, environment),
     queryFn: async () => {
       if (!userAddress) return null;
       return StatsStorage.getOrCreate(userAddress, environment);
