@@ -18,6 +18,7 @@ import type { BridgeParams, BridgeTransaction, WalletOption } from "./types";
 import type { SupportedChainId } from "./networks";
 import { NETWORK_CONFIGS } from "./networks";
 import { bridgeKeys } from "./query-keys";
+import { delayedCallback } from "./delayed-callback";
 import { ms } from "ms-extended";
 import { getWalletsForNetworkType } from "./utils";
 
@@ -185,6 +186,11 @@ export function useBridge() {
         void queryClient.invalidateQueries({
           queryKey: bridgeKeys.balance(params.toChain, userAddress),
         });
+        delayedCallback(transaction.status === "completed", () => {
+          void queryClient.invalidateQueries({
+            queryKey: bridgeKeys.stats(),
+          });
+        });
 
         return transaction;
       } catch (err) {
@@ -206,6 +212,7 @@ export function useBridge() {
  * Hook for retrying failed transactions
  */
 export function useRetryBridge() {
+  const queryClient = useQueryClient();
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addTransaction = useBridgeStore((state) => state.addTransaction);
@@ -220,6 +227,11 @@ export function useRetryBridge() {
         const transaction = await service.retry(transactionId);
 
         addTransaction(transaction);
+        delayedCallback(transaction.status === "completed", () => {
+          void queryClient.invalidateQueries({
+            queryKey: bridgeKeys.stats(),
+          });
+        });
 
         return transaction;
       } catch (err) {
@@ -231,7 +243,7 @@ export function useRetryBridge() {
         setIsRetrying(false);
       }
     },
-    [addTransaction],
+    [addTransaction, queryClient],
   );
 
   return { retryBridge, isRetrying, error };
@@ -243,6 +255,7 @@ export function useRetryBridge() {
  * refreshes the page or reopens a transaction window.
  */
 export function useResumeBridge() {
+  const queryClient = useQueryClient();
   const [isResuming, setIsResuming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const updateTransaction = useBridgeStore((state) => state.updateTransaction);
@@ -257,6 +270,11 @@ export function useResumeBridge() {
         const transaction = await service.resume(transactionId);
 
         updateTransaction(transaction.id, transaction);
+        delayedCallback(transaction.status === "completed", () => {
+          void queryClient.invalidateQueries({
+            queryKey: bridgeKeys.stats(),
+          });
+        });
 
         return transaction;
       } catch (err) {
@@ -268,7 +286,7 @@ export function useResumeBridge() {
         setIsResuming(false);
       }
     },
-    [updateTransaction],
+    [updateTransaction, queryClient],
   );
 
   return { resumeBridge, isResuming, error };
@@ -280,6 +298,7 @@ export function useResumeBridge() {
  * and bridgeResult was never saved. Uses reconstructed BridgeResult to retry.
  */
 export function useRecoverBridge() {
+  const queryClient = useQueryClient();
   const [isRecovering, setIsRecovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const updateTransaction = useBridgeStore((state) => state.updateTransaction);
@@ -294,6 +313,11 @@ export function useRecoverBridge() {
         const transaction = await service.recover(transactionId);
 
         updateTransaction(transaction.id, transaction);
+        delayedCallback(transaction.status === "completed", () => {
+          void queryClient.invalidateQueries({
+            queryKey: bridgeKeys.stats(),
+          });
+        });
 
         return transaction;
       } catch (err) {
@@ -305,7 +329,7 @@ export function useRecoverBridge() {
         setIsRecovering(false);
       }
     },
-    [updateTransaction],
+    [updateTransaction, queryClient],
   );
 
   return { recoverBridge, isRecovering, error };

@@ -64,21 +64,26 @@ export const createTransactionSlice: StateCreator<
         updatedAt: Date.now(),
       });
 
-      // Update aggregate stats when transaction newly completes
+      // Update aggregate stats only when mint step is confirmed complete
+      // This prevents premature stats updates if the user cancels
+      // or the transaction fails before mint is verified on-chain
       if (updates.status === "completed" && !wasCompleted) {
-        const amount = parseFloat(transaction.amount || "0");
-        const isFast = transaction.transferMethod === "fast";
-        const providerFee = parseFloat(transaction.providerFeeUsdc || "0");
-        const environment =
-          NETWORK_CONFIGS[transaction.fromChain]?.environment ?? "mainnet";
+        const mintStep = transaction.steps?.find((s) => s.id === "mint");
+        if (mintStep?.status === "completed") {
+          const amount = parseFloat(transaction.amount || "0");
+          const isFast = transaction.transferMethod === "fast";
+          const providerFee = parseFloat(transaction.providerFeeUsdc || "0");
+          const environment =
+            NETWORK_CONFIGS[transaction.fromChain]?.environment ?? "mainnet";
 
-        void StatsStorage.incrementOnComplete(
-          transaction.userAddress,
-          environment,
-          amount,
-          isFast,
-          providerFee,
-        );
+          void StatsStorage.incrementOnComplete(
+            transaction.userAddress,
+            environment,
+            amount,
+            isFast,
+            providerFee,
+          );
+        }
       }
     }
   },
