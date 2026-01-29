@@ -27,7 +27,7 @@ export type TransactionStatus =
 export interface BridgeStep {
   id: string;
   name: string;
-  status: "pending" | "in_progress" | "completed" | "failed";
+  status: "pending" | "in_progress" | "completed" | "failed" | "cancelled";
   txHash?: string;
   error?: string;
   timestamp: number;

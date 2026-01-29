@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, AlertCircle, Loader2, Clock } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Clock, Ban } from "lucide-react";
 import type { StepIconProps } from "../transaction-windows.types";
 
 export function StepIcon({ step }: StepIconProps) {
@@ -21,6 +21,12 @@ export function StepIcon({ step }: StepIconProps) {
       return (
         <div className="flex size-6 items-center justify-center rounded-full bg-gray-500/10 ring-2 ring-gray-500/20">
           <Loader2 className="size-4 animate-spin text-gray-600 dark:text-gray-400" />
+        </div>
+      );
+    case "cancelled":
+      return (
+        <div className="flex size-6 items-center justify-center rounded-full bg-gray-500/10 ring-2 ring-gray-500/20">
+          <Ban className="size-4 text-gray-400" />
         </div>
       );
     case "pending":

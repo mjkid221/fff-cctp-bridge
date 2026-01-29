@@ -183,6 +183,15 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   /**
+   * Cancel a bridge operation by stopping event processing and blocking future updates.
+   * The underlying SDK promise may still run to completion, but all side effects
+   * (state updates, storage writes, UI syncs) are suppressed.
+   */
+  cancelBridgeOperation(txId: string): void {
+    this.eventManager.markCancelled(txId);
+  }
+
+  /**
    * Sync transaction state to all consumers (store, windows)
    * Uses queueMicrotask to ensure React processes updates immediately
    *
@@ -191,6 +200,9 @@ export class CCTPBridgeService implements IBridgeService {
    * Each window maintains its own transaction copy via updateTransactionInWindow.
    */
   private syncTransactionState(transaction: BridgeTransaction): void {
+    // Skip updates for cancelled transactions
+    if (this.eventManager.isCancelled(transaction.id)) return;
+
     queueMicrotask(() => {
       const state = useBridgeStore.getState();
       state.updateTransaction(transaction.id, transaction);

@@ -46,10 +46,27 @@ interface TransactionKitEntry {
 export class BridgeEventManager {
   private storage: typeof BridgeStorage;
   private transactionKits: Map<string, TransactionKitEntry>;
+  private cancelledTransactions = new Set<string>();
 
   constructor(storage: typeof BridgeStorage) {
     this.storage = storage;
     this.transactionKits = new Map();
+  }
+
+  /**
+   * Mark a transaction as cancelled.
+   * Disposes the kit (removes event listeners) and blocks future event processing.
+   */
+  markCancelled(txId: string): void {
+    this.cancelledTransactions.add(txId);
+    this.disposeTransactionKit(txId);
+  }
+
+  /**
+   * Check if a transaction has been cancelled.
+   */
+  isCancelled(txId: string): boolean {
+    return this.cancelledTransactions.has(txId);
   }
 
   /**
@@ -131,6 +148,9 @@ export class BridgeEventManager {
 
     const stepId = stepMapping[event.method];
     if (!stepId) return;
+
+    // Skip updates for cancelled transactions
+    if (this.cancelledTransactions.has(txId)) return;
 
     const tx = await this.storage.getTransaction(txId);
     if (!tx) return;

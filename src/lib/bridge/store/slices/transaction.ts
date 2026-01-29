@@ -48,6 +48,10 @@ export const createTransactionSlice: StateCreator<
 
   updateTransaction: (id, updates) => {
     const previousTx = get().transactions.find((tx) => tx.id === id);
+
+    // Never overwrite cancelled status from background bridge operations
+    if (previousTx?.status === "cancelled") return;
+
     const wasCompleted = previousTx?.status === "completed";
 
     set((state) => ({
@@ -89,10 +93,24 @@ export const createTransactionSlice: StateCreator<
   },
 
   cancelTransaction: async (id) => {
+    // Stop background bridge operations first (disposes event listeners, blocks future updates)
+    const { getBridgeService } = await import("../../service");
+    getBridgeService().cancelBridgeOperation(id);
+
     set((state) => ({
       transactions: state.transactions.map((tx) =>
         tx.id === id
-          ? { ...tx, status: "cancelled" as const, updatedAt: Date.now() }
+          ? {
+              ...tx,
+              status: "cancelled" as const,
+              updatedAt: Date.now(),
+              // Freeze any in_progress steps so spinners stop
+              steps: tx.steps.map((step) =>
+                step.status === "in_progress"
+                  ? { ...step, status: "cancelled" as const }
+                  : step,
+              ),
+            }
           : tx,
       ),
       // Clear currentTransaction if it matches
