@@ -86,6 +86,8 @@ export const DynamicProvider = ({
             },
           ],
         },
+        // Disable SIWE (and SIWS), we don't need it for our use case. (And also bypasses Dynamic's MAU limits hehe)
+        initialAuthenticationMode: "connect-only",
       }}
     >
       <WalletContextBridge>{children}</WalletContextBridge>
