@@ -115,7 +115,10 @@ export function useBridgeCardState() {
   });
   // React Query returns undefined when no data, but component expects null
   const estimate = estimateData ?? null;
-  const { balance } = useWalletBalance(fromChain);
+  const { balance } = useWalletBalance(
+    fromChain,
+    walletSelection.selectedSourceWallet?.address ?? null,
+  );
 
   // Refs
   const bridgeCardRef = useRef<HTMLDivElement>(null);

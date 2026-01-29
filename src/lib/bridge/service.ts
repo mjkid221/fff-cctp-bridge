@@ -371,9 +371,15 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   /**
-   * Get USDC balance for a specific chain
+   * Get USDC balance for a specific chain and wallet address
+   * @param chain - The chain to fetch balance for
+   * @param walletAddress - Optional explicit wallet address. If provided, uses this address
+   *   and finds the matching wallet for adapter creation. Falls back to first compatible wallet.
    */
-  async getBalance(chain: SupportedChainId): Promise<TokenBalance> {
+  async getBalance(
+    chain: SupportedChainId,
+    walletAddress?: string,
+  ): Promise<TokenBalance> {
     if (!this.userAddress) {
       throw new Error("Service not initialized");
     }
@@ -383,15 +389,26 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error(`Invalid chain: ${chain}`);
     }
 
-    // Find the compatible wallet for this chain type to get the correct address
-    const compatibleWallet = this.wallets.find((w) => {
-      try {
-        const creator = this.adapterFactory.getCreator(network.type);
-        return creator?.canHandle(w) ?? false;
-      } catch {
-        return false;
-      }
-    });
+    // If a specific wallet address is provided, find that wallet first
+    // Otherwise fall back to first compatible wallet for the chain type
+    const compatibleWallet = walletAddress
+      ? (this.wallets.find((w) => w.address === walletAddress) ??
+        this.wallets.find((w) => {
+          try {
+            const creator = this.adapterFactory.getCreator(network.type);
+            return creator?.canHandle(w) ?? false;
+          } catch {
+            return false;
+          }
+        }))
+      : this.wallets.find((w) => {
+          try {
+            const creator = this.adapterFactory.getCreator(network.type);
+            return creator?.canHandle(w) ?? false;
+          } catch {
+            return false;
+          }
+        });
 
     if (!compatibleWallet) {
       throw new Error(`No compatible wallet for ${network.type} network`);
