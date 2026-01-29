@@ -161,7 +161,6 @@ export function useBridgeEstimate(params: {
  */
 export function useBridge() {
   const queryClient = useQueryClient();
-  const userAddress = useBridgeStore((state) => state.userAddress);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setCurrentTransaction = useBridgeStore(
@@ -180,11 +179,12 @@ export function useBridge() {
         // Note: addTransaction is now called in service.bridge() for stats tracking
         setCurrentTransaction(transaction);
 
+        // Invalidate all balance caches (covers all wallet addresses and chains)
+        // After a bridge, both source and destination balances change,
+        // and the affected wallet address may not be the primary wallet
         void queryClient.invalidateQueries({
-          queryKey: bridgeKeys.balance(params.fromChain, userAddress),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: bridgeKeys.balance(params.toChain, userAddress),
+          queryKey: bridgeKeys.balances(),
+          exact: false,
         });
         delayedCallback(transaction.status === "completed", () => {
           void queryClient.invalidateQueries({
@@ -202,7 +202,7 @@ export function useBridge() {
         setIsLoading(false);
       }
     },
-    [setCurrentTransaction, userAddress, queryClient],
+    [setCurrentTransaction, queryClient],
   );
 
   return { executeBridge, isLoading, error };
@@ -338,20 +338,32 @@ export function useRecoverBridge() {
 /**
  * Hook for wallet balance using React Query
  * Automatically waits for service initialization via the enabled option
+ *
+ * @param chainId - The chain to fetch balance for
+ * @param walletAddress - The specific wallet address to fetch balance for.
+ *   This is used in the query key so switching wallets triggers a new fetch.
+ *   If not provided, falls back to the primary wallet address from the store.
  */
-export function useWalletBalance(chainId: SupportedChainId | null) {
+export function useWalletBalance(
+  chainId: SupportedChainId | null,
+  walletAddress?: string | null,
+) {
   // userAddress is set AFTER service.initialize() completes in useBridgeInit
   // So userAddress !== null means the service is ready
   const userAddress = useBridgeStore((state) => state.userAddress);
 
+  // Use the explicit wallet address for the query key and fetch,
+  // falling back to the primary wallet address for backward compatibility
+  const effectiveAddress = walletAddress ?? userAddress;
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: bridgeKeys.balance(chainId, userAddress),
+    queryKey: bridgeKeys.balance(chainId, effectiveAddress),
     queryFn: async () => {
       const service = getBridgeService();
-      return service.getBalance(chainId!);
+      return service.getBalance(chainId!, effectiveAddress ?? undefined);
     },
     // Only fetch when service is initialized (userAddress set) otherwise throws errors
-    enabled: !!userAddress && !!chainId,
+    enabled: !!userAddress && !!chainId && !!effectiveAddress,
     staleTime: ms("30s"),
     gcTime: ms("5m"),
     refetchOnWindowFocus: false,
