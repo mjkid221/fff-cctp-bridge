@@ -561,7 +561,7 @@ export class CCTPBridgeService implements IBridgeService {
       }
     }
 
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
 
     // Add transaction to Zustand array for stats tracking (so updateTransaction can find it)
     useBridgeStore.getState().addTransaction(transaction);
@@ -584,7 +584,7 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     transaction.updatedAt = Date.now();
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
     this.syncTransactionState(transaction);
 
     return transaction;
@@ -703,7 +703,7 @@ export class CCTPBridgeService implements IBridgeService {
       };
     });
 
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
     useBridgeStore.getState().setCurrentTransaction(transaction);
 
     // Create dedicated kit for retry operation with isolated event stream
@@ -718,7 +718,7 @@ export class CCTPBridgeService implements IBridgeService {
       if (stepToRetry) {
         stepToRetry.status = "in_progress";
       }
-      await this.storage.saveTransaction(transaction);
+      await this.saveIfNotCancelled(transaction);
 
       // Cast adapters at BridgeKit API boundary due to internal type mismatch between SDK packages
       type KitAdapter = AdapterContext["adapter"];
@@ -736,7 +736,7 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     transaction.updatedAt = Date.now();
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
     this.syncTransactionState(transaction);
 
     return transaction;
@@ -868,7 +868,7 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     transaction.updatedAt = Date.now();
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
     this.syncTransactionState(transaction);
 
     return transaction;
@@ -975,7 +975,7 @@ export class CCTPBridgeService implements IBridgeService {
       );
       if (attestationStep) {
         attestationStep.status = "in_progress";
-        await this.storage.saveTransaction(transaction);
+        await this.saveIfNotCancelled(transaction);
         this.syncTransactionState(transaction);
       }
 
@@ -1011,7 +1011,7 @@ export class CCTPBridgeService implements IBridgeService {
         attestationStep.status = "completed";
         attestationStep.timestamp = Date.now();
         transaction.attestationHash = attestation.attestation;
-        await this.storage.saveTransaction(transaction);
+        await this.saveIfNotCancelled(transaction);
         this.syncTransactionState(transaction);
       }
 
@@ -1025,7 +1025,7 @@ export class CCTPBridgeService implements IBridgeService {
       const mintStep = transaction.steps.find((s) => s.id === "mint");
       if (mintStep) {
         mintStep.status = "in_progress";
-        await this.storage.saveTransaction(transaction);
+        await this.saveIfNotCancelled(transaction);
         this.syncTransactionState(transaction);
       }
 
@@ -1095,7 +1095,7 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     transaction.updatedAt = Date.now();
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
     this.syncTransactionState(transaction);
 
     return transaction;
@@ -1287,6 +1287,18 @@ export class CCTPBridgeService implements IBridgeService {
   }
 
   // ==================== Private Helper Methods ====================
+
+  /**
+   * Save transaction to storage only if not cancelled.
+   * After cancelBridgeOperation() is called, the SDK promise may still run to completion.
+   * This guard prevents those late writes from overwriting the cancelled status in IndexedDB.
+   */
+  private async saveIfNotCancelled(
+    transaction: BridgeTransaction,
+  ): Promise<void> {
+    if (this.eventManager.isCancelled(transaction.id)) return;
+    await this.storage.saveTransaction(transaction);
+  }
 
   /**
    * Ensure the destination chain is added to the wallet before Bridge Kit tries to use it.
@@ -1536,7 +1548,7 @@ export class CCTPBridgeService implements IBridgeService {
 
     transaction.recipientAddress = context.recipientAddress;
 
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
 
     // Sync state to UI BEFORE blocking call to kit.bridge()
     // This ensures the approve step shows "in_progress" immediately
@@ -1597,7 +1609,7 @@ export class CCTPBridgeService implements IBridgeService {
     }
 
     transaction.updatedAt = Date.now();
-    await this.storage.saveTransaction(transaction);
+    await this.saveIfNotCancelled(transaction);
   }
 
   /**
