@@ -262,11 +262,18 @@ export function useResumeBridge() {
 
   const resumeBridge = useCallback(
     async (transactionId: string): Promise<BridgeTransaction> => {
+      const service = getBridgeService();
+
+      // Skip if an operation is already running for this transaction
+      if (service.isOperationActive(transactionId)) {
+        const existing = await BridgeStorage.getTransaction(transactionId);
+        if (existing) return existing;
+      }
+
       setIsResuming(true);
       setError(null);
 
       try {
-        const service = getBridgeService();
         const transaction = await service.resume(transactionId);
 
         updateTransaction(transaction.id, transaction);
@@ -305,11 +312,18 @@ export function useRecoverBridge() {
 
   const recoverBridge = useCallback(
     async (transactionId: string): Promise<BridgeTransaction> => {
+      const service = getBridgeService();
+
+      // Skip if an operation is already running for this transaction
+      if (service.isOperationActive(transactionId)) {
+        const existing = await BridgeStorage.getTransaction(transactionId);
+        if (existing) return existing;
+      }
+
       setIsRecovering(true);
       setError(null);
 
       try {
-        const service = getBridgeService();
         const transaction = await service.recover(transactionId);
 
         updateTransaction(transaction.id, transaction);

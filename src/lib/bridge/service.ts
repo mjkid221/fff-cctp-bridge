@@ -173,6 +173,7 @@ export class CCTPBridgeService implements IBridgeService {
 
   private userAddress: string | null = null;
   private wallets: IWallet[] = [];
+  private readonly activeOperations = new Set<string>();
 
   constructor(config: BridgeServiceConfig = {}) {
     this.kit = new BridgeKit(); // Keep for estimate() - read-only operations don't need event isolation
@@ -188,7 +189,17 @@ export class CCTPBridgeService implements IBridgeService {
    * (state updates, storage writes, UI syncs) are suppressed.
    */
   cancelBridgeOperation(txId: string): void {
+    this.activeOperations.delete(txId);
     this.eventManager.markCancelled(txId);
+  }
+
+  /**
+   * Check if a bridge operation is currently in-flight for a transaction.
+   * Used to prevent duplicate concurrent operations (e.g., when a transaction
+   * window is closed and reopened while the original operation is still running).
+   */
+  isOperationActive(txId: string): boolean {
+    return this.activeOperations.has(txId);
   }
 
   /**
@@ -575,11 +586,13 @@ export class CCTPBridgeService implements IBridgeService {
       (updatedTx) => this.syncTransactionState(updatedTx),
     );
 
+    this.activeOperations.add(transaction.id);
     try {
       await this.executeBridgeOperation(context, transaction, transactionKit);
     } catch (error) {
       await this.handleBridgeError(transaction, error);
     } finally {
+      this.activeOperations.delete(transaction.id);
       this.eventManager.disposeTransactionKit(transaction.id);
     }
 
@@ -755,6 +768,17 @@ export class CCTPBridgeService implements IBridgeService {
       throw new Error("Bridge service not initialized");
     }
 
+    // Guard: prevent duplicate concurrent operations on the same transaction
+    // (e.g., original bridge() still running when window is closed and reopened)
+    if (this.activeOperations.has(transactionId)) {
+      console.log(
+        "[Resume] Skipping - operation already in-flight for:",
+        transactionId,
+      );
+      const existing = await this.storage.getTransaction(transactionId);
+      if (existing) return existing;
+    }
+
     const transaction = await this.storage.getTransaction(transactionId);
     if (!transaction) {
       throw new Error(`Transaction not found: ${transactionId}`);
@@ -848,6 +872,7 @@ export class CCTPBridgeService implements IBridgeService {
       (updatedTx) => this.syncTransactionState(updatedTx),
     );
 
+    this.activeOperations.add(transaction.id);
     try {
       // Use kit.retry() to continue from where we left off
       // Bridge Kit's retry handles resumption internally based on bridgeResult state
@@ -864,6 +889,7 @@ export class CCTPBridgeService implements IBridgeService {
       // If retry throws, handle the error but keep transaction resumable if possible
       await this.handleBridgeError(transaction, error);
     } finally {
+      this.activeOperations.delete(transaction.id);
       this.eventManager.disposeTransactionKit(transaction.id);
     }
 
@@ -888,6 +914,16 @@ export class CCTPBridgeService implements IBridgeService {
   async recover(transactionId: string): Promise<BridgeTransaction> {
     if (!this.userAddress) {
       throw new Error("Bridge service not initialized");
+    }
+
+    // Guard: prevent duplicate concurrent operations on the same transaction
+    if (this.activeOperations.has(transactionId)) {
+      console.log(
+        "[Recovery] Skipping - operation already in-flight for:",
+        transactionId,
+      );
+      const existing = await this.storage.getTransaction(transactionId);
+      if (existing) return existing;
     }
 
     const transaction = await this.storage.getTransaction(transactionId);
@@ -968,6 +1004,7 @@ export class CCTPBridgeService implements IBridgeService {
       isTestnet,
     });
 
+    this.activeOperations.add(transactionId);
     try {
       // Update attestation step to in_progress
       const attestationStep = transaction.steps.find(
@@ -1092,6 +1129,8 @@ export class CCTPBridgeService implements IBridgeService {
       }
 
       console.error("[Recovery] Failed:", error);
+    } finally {
+      this.activeOperations.delete(transactionId);
     }
 
     transaction.updatedAt = Date.now();

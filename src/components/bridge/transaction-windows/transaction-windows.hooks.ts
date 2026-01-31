@@ -11,6 +11,7 @@ import {
   constrainToViewport,
   NETWORK_CONFIGS,
 } from "~/lib/bridge";
+import { getBridgeService } from "~/lib/bridge/service";
 import {
   useRetryBridge,
   useResumeBridge,
@@ -131,6 +132,21 @@ export function useMultiWindowBridgeProgressState({
 
     // If neither condition is met, transaction is too early to recover
     if (!hasBridgeResult && !hasBurnCompleted) return;
+
+    // Guard: skip auto-resume if the original bridge operation is still running
+    // (e.g., user closed the window and reopened it without a page refresh)
+    try {
+      const service = getBridgeService();
+      if (service.isOperationActive(transaction.id)) {
+        console.log(
+          "[Auto-Resume] Skipping - operation already in-flight for:",
+          transaction.id,
+        );
+        return;
+      }
+    } catch {
+      // Service not initialized yet - safe to proceed with resume
+    }
 
     // Set ref BEFORE async call - NEVER reset on error to prevent infinite loops
     hasAttemptedResumeRef.current = true;
