@@ -48,7 +48,7 @@ export function StatsWindowView({
           {/* Header */}
           <div className="border-border/30 bg-muted/40 border-b px-4 py-3">
             <h3 className="text-foreground text-sm font-medium">
-              Bridge Stats
+              My Bridge Stats
             </h3>
           </div>
 

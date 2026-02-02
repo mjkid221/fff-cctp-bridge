@@ -54,7 +54,7 @@ export function StatsDrawerView({
         {/* Header */}
         <div className="border-border/30 flex items-center justify-between border-b px-4 pb-3">
           <h3 className="text-foreground text-lg font-semibold">
-            Bridge Stats
+            My Bridge Stats
           </h3>
           <button
             onClick={onClose}

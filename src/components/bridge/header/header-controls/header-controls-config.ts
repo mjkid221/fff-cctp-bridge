@@ -52,9 +52,9 @@ export const HEADER_CONTROLS_CONFIG: HeaderControlItem[] = [
     id: "stats",
     type: "icon-button",
     icon: LayoutDashboard,
-    label: "Bridge Stats",
+    label: "My Bridge Stats",
     onClick: (props) => props.onToggleStats(),
-    ariaLabel: "Bridge Stats",
+    ariaLabel: "My Bridge Stats",
     showInMobileMenu: true,
   },
 

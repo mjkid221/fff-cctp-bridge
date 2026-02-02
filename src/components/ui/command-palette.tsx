@@ -176,7 +176,7 @@ export function CommandPalette({
                     <CommandItem
                       onSelect={() => runCommand(onOpenStats)}
                       icon={<LayoutDashboard className="size-4" />}
-                      label="Bridge Stats"
+                      label="My Bridge Stats"
                     />
                     <CommandItem
                       onSelect={() => runCommand(toggleNotificationPanel)}
